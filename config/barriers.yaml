@@ -1,0 +1,8 @@
+/**: # wildcard for the node name
+  ros__parameters:
+    barriers: 
+      pool_limits_x: [0.0, 2.0]  # in m
+      pool_limits_y: [0.0, 4.0]  # in m
+      obstacle_limits_x: [0.75, 1.25]  # in m
+      obstacle_limits_y: [1.9, 2.1]  # in m
+    cell_resolution: 0.025  # in m

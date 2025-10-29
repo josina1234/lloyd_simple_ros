@@ -1,0 +1,5 @@
+/**: # wildcard for the node name
+  ros__parameters:
+    pool_size_x: 2.0    # in m
+    pool_size_y: 4.0    # in m
+    cell_resolution: 0.025  # in m
