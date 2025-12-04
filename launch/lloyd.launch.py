@@ -18,7 +18,6 @@ from launch.substitutions import LaunchConfiguration
 # topics zum positioncontroller publishen in termianl: ros2 topic pub -r 50 /bluerov01/position_controller/setpoint geometry_msgs/msg/PointStamped "{point:{x: 1.4, y: 1.5}}"
 
 
-
 def generate_launch_description() -> LaunchDescription:
     launch_description = LaunchDescription()
 
@@ -38,9 +37,19 @@ def generate_launch_description() -> LaunchDescription:
     launch_description.add_action(arg)
 
     # dynamische Gruppenerstellung basierend auf vehicle_names
-    launch_description.add_action(
-        OpaqueFunction(function=add_auv_groups)
+    launch_description.add_action(OpaqueFunction(function=add_auv_groups))
+
+    # RViz2 Node
+    rviz_file = str(
+        get_package_share_path('lloyd_simple') / 'config/rviz.rviz')
+
+    action = Node(
+        executable='rviz2',
+        package='rviz2',
+        name='rviz2',
+        arguments=['-d', rviz_file, '--ros-args', '--log-level', 'error'],
     )
+    launch_description.add_action(action)
 
     # change number for different scenarios
     # scenario_arg = DeclareLaunchArgument(
@@ -52,17 +61,19 @@ def generate_launch_description() -> LaunchDescription:
 
     return launch_description
 
+
 def add_auv_groups(context, *args, **kwargs):
     """Erstellt dynamisch GroupActions für jedes Fahrzeug"""
     # Zugriff auf die vehicle_names aus dem LaunchConfiguration
     vehicle_names_str = context.launch_configurations['vehicle_names']
     vehicle_names = [name.strip() for name in vehicle_names_str.split(',')]
-    
+
+    num_vehicles = len(vehicle_names)
+
     groups = []
-    
+
     # Package-Pfade
     package_path = get_package_share_path('lloyd_simple')
-    mapping_params_file_path = str(package_path / 'config/mapping_params.yaml')
     position_controller_params_file_path = str(
         package_path / 'config/position_controller_config.yaml')
     yaw_controller_params_file_path = str(package_path /
@@ -71,36 +82,37 @@ def add_auv_groups(context, *args, **kwargs):
                                          'config/path_follower_config.yaml')
     barriers_file_path = str(package_path / 'config/barriers.yaml')
     lloyd_parameters_file_path = str(package_path / 'config/lloyd_params.yaml')
-    
+
     # Für jedes Fahrzeug eine Gruppe erstellen
     for vehicle_name in vehicle_names:
         group = GroupAction([
             PushROSNamespace(vehicle_name),
-            # maps basin with coresponding cell resolution
-            # Node(
-            #     executable='mapper.py',
-            #     package='lloyd_simple',
-            #     parameters=[
-            #         mapping_params_file_path,
-            #         {
-            #             'use_sim_time': LaunchConfiguration('use_sim_time'),
-            #         },
-            #     ],
-            # ),
+
             # # lloyd algorithm for path planning
-            # Node(
-            #     executable='lloyd_path_planner.py',
-            #     package='lloyd_simple',
-            #     parameters=[
-            #         {
-            #             'use_sim_time': LaunchConfiguration('use_sim_time'),
-            #         },
-            #         barriers_file_path,
-            #         lloyd_parameters_file_path,
-            #     ],
-            #     output='screen',
-            #     emulate_tty=True,
-            # ),
+            Node(
+                executable='lloyd_path_planner.py',
+                package='lloyd_simple',
+                parameters=[
+                    {
+                        'use_sim_time': LaunchConfiguration('use_sim_time'),
+                        'num_vehicles': num_vehicles,
+                        'vehicle_name': vehicle_name,
+                    },
+                    barriers_file_path,
+                    lloyd_parameters_file_path,
+                ],
+                output='screen',
+                emulate_tty=True,
+            ),
+            Node(
+                executable='robot_marker_publisher',
+                package='fav',
+                parameters=[
+                    {
+                        'use_sim_time': LaunchConfiguration('use_sim_time'),
+                    },
+                ],
+            ),
             # # computes a smooth trajectory between the waypoints, and yaw angles
             # Node(
             #     executable='path_follower.py',
@@ -119,6 +131,7 @@ def add_auv_groups(context, *args, **kwargs):
                 parameters=[
                     {
                         'use_sim_time': LaunchConfiguration('use_sim_time'),
+                        'vehicle_name': vehicle_name,
                     },
                     position_controller_params_file_path,
                 ],
@@ -131,6 +144,7 @@ def add_auv_groups(context, *args, **kwargs):
                 parameters=[
                     {
                         'use_sim_time': LaunchConfiguration('use_sim_time'),
+                        'vehicle_name': vehicle_name,
                     },
                     yaw_controller_params_file_path,
                 ],
@@ -138,5 +152,5 @@ def add_auv_groups(context, *args, **kwargs):
             ),
         ])
         groups.append(group)
-    
+
     return groups

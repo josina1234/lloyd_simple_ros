@@ -12,6 +12,7 @@ find_package(rosidl_default_generators REQUIRED)
 install(PROGRAMS
   nodes/yaw_controller.py
   nodes/position_controller.py
+  nodes/lloyd_path_planner.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -20,6 +21,6 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
-# ament_python_install_package(${PROJECT_NAME})
+ament_python_install_package(${PROJECT_NAME})
 
 ament_package()

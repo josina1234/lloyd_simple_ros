@@ -78,7 +78,7 @@ class PositionController(Node):
             ActuatorSetpoint, 'thrust_setpoint', 1
         )
         self.position_setpoint_sub = self.create_subscription(
-            PointStamped, '~/setpoint', self.on_position_setpoint, 1
+            PointStamped, 'setpoint_position', self.on_position_setpoint, 1
         )
         self.pose_sub = self.create_subscription(
             PoseWithCovarianceStamped, 'vision_pose_cov', self.on_pose, 1
@@ -196,9 +196,6 @@ class PositionController(Node):
             return np.zeros((3, 1))
         error = self.setpoint - current_position
         self.error_integral += dt * error
-        # use of derivatives of position and setpoint instead of deravive of
-        # error such that the different time stamps of setpoints and positions
-        # are considered
         dposition = (current_position - self.last_position) / max(dt, 1e-6)
         derror = self.moving_average_filter(self.dsetpoint - dposition)
         p_component = self.K_p @ error
