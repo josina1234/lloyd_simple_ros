@@ -25,6 +25,9 @@ from lloyd_simple.scripts.barriers import barriers
 from lloyd_simple.scripts.lloyd_path import Lloyd, applyrules
 import copy
 
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
+from builtin_interfaces.msg import Time
+
 
 class State(Enum):
     UNSET = auto()
@@ -66,6 +69,22 @@ class LloydPathPlanner(Node):
         self.init_services()
         self.init_robot_subscribers()  # Neue Methode für Multi-Robot Subscriber
 
+
+        start_qos = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL
+        )
+
+        # subscriber für startzeit topic
+        mission_ns = 'mission'  # oder aus parameter/configuration lesen
+        self.start_sub = self.create_subscription(
+            Time, f'/{mission_ns}/start', self.on_start_time, start_qos
+        )
+        self.get_logger().info(f'{self.own_namespace}: waiting for start time on /{mission_ns}/start')
+
+
         self.pose_sub = self.create_subscription(PoseWithCovarianceStamped,
                                                  'vision_pose_cov',
                                                  self.on_pose, 1)
@@ -77,6 +96,30 @@ class LloydPathPlanner(Node):
         self.lloyd_timer = self.create_timer(0.02, self.lloyd_timer_callback)  # 50Hz = 0.02s
 
         self.initialize_lloyd_algorithm()
+
+    def on_start_time(self, msg: Time):
+        """Callback for receiving start time"""
+        self.start_time_msg = msg
+        self.get_logger().info(f'{self.own_namespace}: received start time: {msg.sec}.{msg.nanosec:09d}')
+        self.wait_until_start_and_go()
+
+    def wait_until_start_and_go(self):
+        """Wait until the specified start time and then start the Lloyd algorithm"""
+        if self.start_time_msg is None:
+            return  # No start time received yet
+
+        # Calculate start time in seconds
+        start_time_sec = self.start_time_msg.sec + self.start_time_msg.nanosec * 1e-9
+        current_time = self.get_clock().now().seconds_nanoseconds()
+        current_time_sec = current_time[0] + current_time[1] * 1e-9
+
+        wait_duration = start_time_sec - current_time_sec
+        if wait_duration > 0:
+            self.get_logger().info(f'{self.own_namespace}: waiting for {wait_duration:.3f} seconds to start...')
+            time.sleep(wait_duration)
+
+        self.get_logger().info(f'{self.own_namespace}: starting Lloyd algorithm now.')
+        self.state = State.NORMAL_OPERATION
 
     def init_params(self):
         self.own_namespace = self.get_namespace().strip(
@@ -184,6 +227,8 @@ class LloydPathPlanner(Node):
         self.all_barriers = Barriers.def_barriers()
         self.basin_limits, self.obstacle_limits = Barriers.get_limits()
         ################################################################
+
+        self.start_time_msg = None  # to store received start time message
 
     def initialize_lloyd_algorithm(self):
         """Lloyd-Algorithmus Initialisierung"""
@@ -503,6 +548,9 @@ class LloydPathPlanner(Node):
 
 def main():
     rclpy.init()
+
+
+
     node = LloydPathPlanner()
     exec = MultiThreadedExecutor()
     exec.add_node(node)

@@ -51,27 +51,11 @@ def generate_launch_description() -> LaunchDescription:
     )
     launch_description.add_action(action)
 
-    # change number for different scenarios
-    # scenario_arg = DeclareLaunchArgument(
-    #     name='scenario',
-    #     default_value=str(1),
-    #     description='The number of the scenario',
-    # )
-    # launch_description.add_action(scenario_arg)
-
     return launch_description
 
 
 def add_auv_groups(context, *args, **kwargs):
     """Erstellt dynamisch GroupActions für jedes Fahrzeug"""
-    # Zugriff auf die vehicle_names aus dem LaunchConfiguration
-    vehicle_names_str = context.launch_configurations['vehicle_names']
-    vehicle_names = [name.strip() for name in vehicle_names_str.split(',')]
-
-    num_vehicles = len(vehicle_names)
-
-    groups = []
-
     # Package-Pfade
     package_path = get_package_share_path('lloyd_simple')
     position_controller_params_file_path = str(
@@ -82,6 +66,29 @@ def add_auv_groups(context, *args, **kwargs):
                                          'config/path_follower_config.yaml')
     barriers_file_path = str(package_path / 'config/barriers.yaml')
     lloyd_parameters_file_path = str(package_path / 'config/lloyd_params.yaml')
+
+    # Zugriff auf die vehicle_names aus dem LaunchConfiguration
+    vehicle_names_str = context.launch_configurations['vehicle_names']
+    vehicle_names = [name.strip() for name in vehicle_names_str.split(',')]
+
+    num_vehicles = len(vehicle_names)
+
+    # Add start_algorithm node here where we have context
+    start_algorithm_node = Node(
+        executable='start_algorithm.py',
+        package='lloyd_simple',
+        name='start_coordinator',
+        output='screen',
+        parameters=[{
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'num_vehicles': num_vehicles,
+            'vehicle_names': vehicle_names,
+            },
+            lloyd_parameters_file_path
+        ],
+    )
+
+    groups = []
 
     # Für jedes Fahrzeug eine Gruppe erstellen
     for vehicle_name in vehicle_names:
@@ -153,4 +160,4 @@ def add_auv_groups(context, *args, **kwargs):
         ])
         groups.append(group)
 
-    return groups
+    return [start_algorithm_node] + groups

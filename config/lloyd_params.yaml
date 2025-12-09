@@ -21,6 +21,7 @@
     waiting_time: 400      # Wartezeit nach Konvergenz [Schritte]
     bluerov_names: ['bluerov00', 'bluerov01', 'bluerov02', 'bluerov03', 'bluerov04', 'bluerov05']
     random: false
+    start_offset_sec: 5.0  # Start offset in seconds
 
 /bluerov00/**:
   ros__parameters:

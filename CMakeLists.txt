@@ -13,6 +13,7 @@ install(PROGRAMS
   nodes/yaw_controller.py
   nodes/position_controller.py
   nodes/lloyd_path_planner.py
+  nodes/start_algorithm.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
