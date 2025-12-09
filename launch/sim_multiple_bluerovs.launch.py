@@ -73,7 +73,7 @@ def generate_launch_description():
     )
 
     # Spawn n BlueROVs
-    bachelor_arbeit_test_path = get_package_share_path('bachelor_arbeit_test')
+    lloyd_simple_path = get_package_share_path('lloyd_simple')
     def spawn_bluerovs(context):
         names = context.launch_configurations['vehicle_names'].split(',')
         # exception wenn mehr als 4 fahrzeuge
@@ -89,7 +89,7 @@ def generate_launch_description():
         zi = [-0.5, -0.5, -0.5, -0.5]
         Yi = [1.5708, 1.5708, 1.5708, 1.5708] # Spawnwinkel (Yaw) für bis zu 4 Fahrzeuge
         actions = []
-        spawn_path = str(bachelor_arbeit_test_path / 'launch/spawn_bluerov.launch.py') # pfad zur abgeänderten Launchfile (original: hippo_sim)
+        spawn_path = str(lloyd_simple_path / 'launch/spawn_bluerov.launch.py') # pfad zur abgeänderten Launchfile (original: hippo_sim)
         for i, name in enumerate(names):
             args = {
                 'vehicle_name': TextSubstitution(text=name.strip()),
