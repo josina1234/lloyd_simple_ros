@@ -84,7 +84,8 @@ def add_auv_groups(context, *args, **kwargs):
             'num_vehicles': num_vehicles,
             'vehicle_names': vehicle_names,
             },
-            lloyd_parameters_file_path
+            lloyd_parameters_file_path,
+            barriers_file_path
         ],
     )
 

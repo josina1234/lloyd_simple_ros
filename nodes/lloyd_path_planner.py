@@ -13,6 +13,7 @@ from geometry_msgs.msg import (
     PoseWithCovarianceStamped,
     Quaternion,
 )
+from hippo_msgs.msg import Float64Stamped, BoolStamped
 from nav_msgs.msg import Path
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -54,11 +55,6 @@ class LloydPathPlanner(Node):
         self.init_weighted_centroids_marker()
         self.weighted_centroids_pub = self.create_publisher(Marker, '~/weighted_centroids', 1)
         
-        # Initialize obstacle boundaries marker
-        self.obstacle_boundaries_marker: Marker
-        self.init_obstacle_boundaries_marker()
-        self.obstacle_boundaries_pub = self.create_publisher(Marker, '~/obstacle_boundaries', 1)
-        
         self.setpoints = [] # zum Speichern der c1
 
         self.progress = -1.0
@@ -90,10 +86,25 @@ class LloydPathPlanner(Node):
                                                  self.on_pose, 1)
 
         # Add setpoint publisher for position control
-        self.setpoint_pub = self.create_publisher(PointStamped, 'setpoint_position', 1)
+        self.setpoint_pub = self.create_publisher(msg_type=PointStamped, topic='setpoint_position', qos_profile=1)
         
         # Create timer for Lloyd algorithm execution at 50Hz
         self.lloyd_timer = self.create_timer(0.02, self.lloyd_timer_callback)  # 50Hz = 0.02s
+
+        # Create publisher for temp_goal
+        self.temp_goal_pub = self.create_publisher(msg_type=PointStamped, topic='~/temp_goal_position', qos_profile=1)
+
+        # Create Publisher for beta value double value
+        self.beta_pub = self.create_publisher(msg_type=Float64Stamped, topic='~/beta_value', qos_profile=1)
+
+        #Create Publisher for final_goal
+        self.final_goal_pub = self.create_publisher(msg_type=PointStamped, topic='~/final_goal_position', qos_profile=1)
+
+        # Create Publisher for theta value
+        self.theta_pub = self.create_publisher(msg_type=Float64Stamped, topic='~/theta_value', qos_profile=1)
+
+        # Create publisher für at goal
+        self.at_goal_pub = self.create_publisher(msg_type=BoolStamped, topic='~/at_goal', qos_profile=1)
 
         self.initialize_lloyd_algorithm()
 
@@ -246,9 +257,6 @@ class LloydPathPlanner(Node):
         self.Lloyd = Lloyd(self.radius, self.size, self.cell_resolution, 
                           self.encumbrance_barriers, self.all_barriers, 
                           self.basin_limits, self.obstacle_limits)
-        
-        # Publish obstacle boundaries after Lloyd initialization
-        self.publish_obstacle_boundaries()
 
     def init_services(self):
         self.start_service = self.create_service(
@@ -380,11 +388,22 @@ class LloydPathPlanner(Node):
         # Publish setpoint for position controller
         self.publish_setpoint()
 
-        # Lloyd-Algorithmus mit aktuellen Daten ausführen - Debug output
-        self.get_logger().debug(f'Current position: {current_position.flatten()}')
-        self.get_logger().debug(f'Current neighbours: {len(neighbours)} robots')
-        self.get_logger().debug(f'Goal position: {self.goal_position.flatten()}')
-        self.get_logger().debug(f'Setpoint: {self.c1.flatten()}')
+        # Publish self.beta for debugging
+        self.publish_beta()
+        # Publish self.goal_position for debugging
+        self.publish_temp_goal()
+        # publish self.final_goal for debugging
+        self.publish_final_goal()
+
+        # publish self.theta for debugging
+        self.publish_theta()
+        #
+
+        # # Lloyd-Algorithmus mit aktuellen Daten ausführen - Debug output
+        # self.get_logger().debug(f'Current position: {current_position.flatten()}')
+        # self.get_logger().debug(f'Current neighbours: {len(neighbours)} robots')
+        # self.get_logger().debug(f'Goal position: {self.goal_position.flatten()}')
+        # self.get_logger().debug(f'Setpoint: {self.c1.flatten()}')
 
     def publish_setpoint(self):
         """Publish setpoint for position controller based on Lloyd centroid"""
@@ -408,6 +427,40 @@ class LloydPathPlanner(Node):
         
         # Publish weighted centroids marker
         self.publish_weighted_centroids_marker()
+
+    def publish_beta(self):
+        """Publish beta value for debugging"""
+        msg = Float64Stamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.data = float(self.beta)
+        self.beta_pub.publish(msg)
+
+    def publish_temp_goal(self):
+        """Publish temporary goal position for debugging"""
+        msg = PointStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'map'
+        msg.point.x = float(self.goal_position[0])
+        msg.point.y = float(self.goal_position[1])
+        msg.point.z = -0.5  # Constant altitude
+        self.temp_goal_pub.publish(msg)
+
+    def publish_final_goal(self):
+        """Publish final goal position for debugging"""
+        msg = PointStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'map'
+        msg.point.x = float(self.final_goal[0])
+        msg.point.y = float(self.final_goal[1])
+        msg.point.z = -0.5  # Constant altitude
+        self.final_goal_pub.publish(msg)
+
+    def publish_theta(self):
+        """Publish theta value for debugging"""
+        msg = Float64Stamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.data = float(self.theta)
+        self.theta_pub.publish(msg)
 
     def serve_start(self, request, response):
         if self.state != State.NORMAL_OPERATION:
@@ -441,11 +494,20 @@ class LloydPathPlanner(Node):
         distance_to_goal = np.linalg.norm(current_pos - goal_pos)
         
         # Check if close enough to goal (within robot size)
-        if distance_to_goal < self.size * 2:
-            self.get_logger().info(f'Robot {self.bluerov_id} reached its goal!')
-            self.do_stop()
+        if distance_to_goal < self.size:
+            # self.get_logger().info(f'Robot {self.bluerov_id} reached its goal!')
+            self.publish_at_goal()
+            # self.do_stop()
             return True
         return False
+    
+    def publish_at_goal(self):
+        """Publish a message indicating the robot has reached its goal"""
+        msg = BoolStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.data = True
+        self.at_goal_pub.publish(msg)
+        # Here you can implement any additional logic needed when the robot reaches its goal
 
     def reset_internals(self):
         self.target_viewpoint_index = -1
@@ -498,52 +560,6 @@ class LloydPathPlanner(Node):
         msg.points = [Point(x=p[0], y=p[1], z=-0.5) for p in self.setpoints]
         msg.header.stamp = self.get_clock().now().to_msg()
         self.weighted_centroids_pub.publish(msg)
-
-    def init_obstacle_boundaries_marker(self):
-        msg = Marker()
-        msg.action = Marker.ADD
-        msg.ns = 'obstacle_boundaries'
-        msg.id = 0
-        msg.type = Marker.LINE_STRIP
-        msg.header.frame_id = 'map'
-        msg.color.a = 1.0
-        msg.color.r = 1.0
-        msg.color.g = 0.0
-        msg.color.b = 0.0
-        msg.scale.x = 0.03
-        msg.scale.y = 0.03
-        msg.scale.z = 0.03
-        self.obstacle_boundaries_marker = msg
-
-    def publish_obstacle_boundaries(self):
-        """Publish obstacle boundaries as line strip markers"""
-        msg = self.obstacle_boundaries_marker
-        
-        # Create boundary points from obstacle limits
-        boundary_points = []
-        
-        # Add rectangle boundary points (clockwise)
-        x_min, x_max = self.obstacle_limits_x[0], self.obstacle_limits_x[1]
-        y_min, y_max = self.obstacle_limits_y[0], self.obstacle_limits_y[1]
-        
-        # Bottom edge (left to right)
-        boundary_points.append(Point(x=x_min, y=y_min, z=-0.5))
-        boundary_points.append(Point(x=x_max, y=y_min, z=-0.5))
-        
-        # Right edge (bottom to top)
-        boundary_points.append(Point(x=x_max, y=y_max, z=-0.5))
-        
-        # Top edge (right to left)
-        boundary_points.append(Point(x=x_min, y=y_max, z=-0.5))
-        
-        # Left edge (top to bottom) - close the loop
-        boundary_points.append(Point(x=x_min, y=y_min, z=-0.5))
-        
-        msg.points = boundary_points
-        msg.header.stamp = self.get_clock().now().to_msg()
-        self.obstacle_boundaries_pub.publish(msg)
-        
-        self.get_logger().info('Published obstacle boundaries for visualization')
 
 
 def main():

@@ -118,9 +118,9 @@ class Lloyd:
             x_cell_no_influence, y_cell_no_influence, self.goal_position)
         scalar_values_no_rotation = self.compute_scalar_values(
             x_cell, y_cell, self.final_goal)
-        print(
-            f'self.goal_position: {self.goal_position} und self.final_goal: {self.final_goal}'
-        )
+        # print(
+        #     f'self.goal_position: {self.goal_position} und self.final_goal: {self.final_goal}'
+        # )
 
         # make sure everything is numpy array
         x_cell = np.array(x_cell)
@@ -155,7 +155,6 @@ class Lloyd:
         return c1, c2, c1_norot
 
     def get_circle_points(self):
-        print(f'current position: {self.current_position}')
 
         x_center, y_center = self.current_position
 
@@ -375,7 +374,6 @@ def applyrules(d1, d2, dt, beta_d, beta_min, beta, current_position, c1, c2,
     if dist_c1_c2 > d2 and np.linalg.norm(current_position - c1) < d1:
         beta = max(beta - dt, beta_min)
         theta = min(theta + dt, alpha)
-        print(f'Test theta: {theta}')
     # second condition
     else:
         beta = beta - dt * (beta - beta_d)
