@@ -77,7 +77,7 @@ class LloydPathPlanner(Node):
         mission_ns = 'mission'  # oder aus parameter/configuration lesen
         self.start_sub = self.create_subscription(
             Time, f'/{mission_ns}/start', self.on_start_time, start_qos
-        )
+        ) # leading / vor mission_ns wichtig, da sonst relativ zum eigenen namespace gesucht wird
         self.get_logger().info(f'{self.own_namespace}: waiting for start time on /{mission_ns}/start')
 
 

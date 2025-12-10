@@ -213,6 +213,14 @@ class PositionController(Node):
         i_component = R.transpose() @ i_component
         thrust = p_component + d_component + i_component
 
+        # thrust saturation
+        max_thrust = 0.5 # jeweils
+        for i, direction in enumerate(thrust):
+            if direction > max_thrust:
+                thrust[i, 0] = max_thrust
+            elif direction < -max_thrust:
+                thrust[i, 0] = -max_thrust
+
         debug_msg = Vector3Stamped()
         debug_msg.header.stamp = time_now.to_msg()
         debug_msg.vector.x = p_component[0, 0]
@@ -241,6 +249,7 @@ class PositionController(Node):
         self.last_time = time_now
         self.last_position = current_position
         self.last_derror = derror
+        # self.get_logger().info(f'Thrust command: {thrust.flatten()}')
         return thrust
 
 

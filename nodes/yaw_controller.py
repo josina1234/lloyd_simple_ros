@@ -20,14 +20,19 @@ class YawController(Node):
         )
 
         # default value for the yaw setpoint
-        self.setpoint = math.pi / 2.0
-        self.setpoint_timed_out = True
+        self.setpoint = 0.0 + math.pi / 2  # Facing "forward" along the x-axis
+        self.setpoint_timed_out = False  # Changed: always have a valid setpoint
         self.dsetpoint = 0.0
         self.last_setpoint_time = self.get_clock().now()
 
+        # Position tracking for movement direction
+        self.last_position = None
+        self.current_position = None
+        self.movement_direction = 0.0
+
         self.error_integral = 0.0
         self.got_first_state = False
-        self.got_first_setpoint = False
+        self.got_first_setpoint = True  # Changed: always consider we have a setpoint
         self.last_time = self.get_clock().now()
         self.last_yaw = 0.0
         self.last_derror = 0.0
@@ -39,6 +44,7 @@ class YawController(Node):
                 ('gains.i', rclpy.Parameter.Type.DOUBLE),
                 ('gains.d', rclpy.Parameter.Type.DOUBLE),
                 ('filter_gain', rclpy.Parameter.Type.DOUBLE),
+                ('min_movement_threshold', rclpy.Parameter.Type.DOUBLE),  # Added parameter
             ],
         )
         param = self.get_parameter('gains.p')
@@ -57,6 +63,9 @@ class YawController(Node):
         self.get_logger().info(f'{param.name}={param.value}')
         self.alpha = param.value
 
+        param = self.get_parameter('min_movement_threshold')
+        self.min_movement_threshold = param.value
+
         self.add_on_set_parameters_callback(self.on_params_changed)
 
         self.pid_debug_pub = self.create_publisher(
@@ -69,19 +78,12 @@ class YawController(Node):
             callback=self.on_vision_pose,
             qos_profile=qos,
         )
-        self.setpoint_sub = self.create_subscription(
-            YawTarget,
-            topic='~/setpoint',
-            callback=self.on_setpoint,
-            qos_profile=qos,
-        )
 
         self.torque_pub = self.create_publisher(
             msg_type=ActuatorSetpoint, topic='torque_setpoint', qos_profile=1
         )
-        self.setpoint_timeout_timer = self.create_timer(
-            0.5, self.on_setpoint_timeout
-        )
+        
+        # Remove setpoint timeout timer - not needed anymore
         self.state_timeout_timer = self.create_timer(0.5, self.on_state_timeout)
 
     def on_params_changed(self, params):
@@ -97,22 +99,18 @@ class YawController(Node):
                 self.K_d = param.value
             elif param.name == 'filter_gain':
                 self.alpha = param.value
+            elif param.name == 'min_movement_threshold':
+                self.min_movement_threshold = param.value
             else:
                 continue
-        return SetParametersResult(succesful=True, reason='Parameter set')
+        return SetParametersResult(successful=True, reason='Parameter set')
 
     def on_state_timeout(self):
         self.state_timeout_timer.cancel()
         self.get_logger().warn('yaw state timed out. waiting for states.')
         self.last_yaw = None
 
-    def on_setpoint_timeout(self):
-        self.setpoint_timeout_timer.cancel()
-        self.get_logger().warn('Setpoint timed out. Waiting for new setpoints')
-        self.setpoint = None
-        self.last_derror = 0.0
-        self.error_integral = 0.0
-        self.setpoint_timed_out = True
+    # Remove on_setpoint_timeout method - not needed
 
     def wrap_pi(self, value: float):
         """Normalize the angle to the range [-pi; pi]."""
@@ -122,43 +120,65 @@ class YawController(Node):
         num_wraps = math.floor((value + math.pi) / range)
         return value - range * num_wraps
 
-    def on_setpoint(self, msg: YawTarget):
-        self.setpoint_timeout_timer.reset()
-        if self.setpoint_timed_out:
-            self.get_logger().info('Setpoint received! Getting back to work.')
-        if not self.got_first_setpoint:
-            self.got_first_setpoint = True
-        self.setpoint_timed_out = False
-        setpoint = self.wrap_pi(msg.yaw_target)
-        if self.setpoint is None:
-            self.dsetpoint = 0.0
-        else:
-            dt = (
-                rclpy.time.Time.from_msg(msg.header.stamp)
-                - self.last_setpoint_time
-            ).nanoseconds * 1e-9
-            self.dsetpoint = self.wrap_pi(setpoint - self.setpoint) / max(
-                dt, 1e-6
-            )
-        self.setpoint = setpoint
-        self.last_setpoint_time = rclpy.time.Time.from_msg(msg.header.stamp)
+    # Remove on_setpoint method - not needed
+
+    def calculate_movement_direction(self, current_pos):
+        """Calculate movement direction from position changes"""
+        if self.last_position is None:
+            return None
+            
+        dx = current_pos[0] - self.last_position[0]
+        dy = current_pos[1] - self.last_position[1]
+        
+        # Only update direction if we moved significantly
+        movement_distance = math.sqrt(dx*dx + dy*dy)
+        if movement_distance < self.min_movement_threshold:
+            return None
+            
+        # Calculate direction angle and rotate by 90 degrees for robot's x-axis
+        direction = math.atan2(dy, dx) #- math.pi/2
+        return self.wrap_pi(direction)
 
     def on_vision_pose(self, msg: PoseWithCovarianceStamped):
         self.state_timeout_timer.reset()
+        
+        # Extract position
+        pos = msg.pose.pose.position
+        self.current_position = [pos.x, pos.y, pos.z]
+        
         # get the vehicle orientation expressed as quaternion
         q = msg.pose.pose.orientation
         # convert the quaternion to euler angles
         (roll, pitch, yaw) = euler_from_quaternion([q.x, q.y, q.z, q.w])
-        # yaw = self.wrap_pi(yaw)
+        yaw = self.wrap_pi(yaw)
+        
+        # Calculate movement direction and update setpoint
+        movement_dir = self.calculate_movement_direction(self.current_position)
+        if movement_dir is not None:
+            old_setpoint = self.setpoint
+            ############################################
+            # self.setpoint = movement_dir
+            # CHANGE HERRE FOR ADAPTIVE YAW SETPOINT BASED ON MOVEMENT DIRECTION
+            dt = (rclpy.time.Time.from_msg(msg.header.stamp) - self.last_setpoint_time).nanoseconds * 1e-9
+            self.dsetpoint = self.wrap_pi(self.setpoint - old_setpoint) / max(dt, 1e-6)
+            self.last_setpoint_time = rclpy.time.Time.from_msg(msg.header.stamp)
+            self.get_logger().info(f'Updated setpoint to movement direction: {self.setpoint:.3f} rad')
+        
+        self.get_logger().info(f'Received yaw: {yaw:.3f} rad, setpoint: {self.setpoint:.3f} rad')
+        
         if not self.got_first_state:
             self.got_first_state = True
             self.last_time = rclpy.time.Time.from_msg(msg.header.stamp)
             self.last_yaw = yaw
+            self.last_position = self.current_position
             return
 
         timestamp = rclpy.time.Time.from_msg(msg.header.stamp)
         control_output = self.compute_control_output(yaw, timestamp)
         self.publish_control_output(control_output, timestamp)
+        
+        # Update position history
+        self.last_position = self.current_position
 
     def moving_average_filter(self, derror):
         return self.alpha * derror + (1 - self.alpha) * self.last_derror
@@ -166,9 +186,8 @@ class YawController(Node):
     def compute_control_output(self, yaw: float, time_now: rclpy.time.Time):
         dt = (time_now - self.last_time).nanoseconds * 1e-9
         if (
-            (not self.got_first_setpoint)
+            (not self.got_first_state)
             | (self.last_yaw is None)
-            | self.setpoint_timed_out
             | (dt <= 0.0)
         ):
             self.last_time = time_now
@@ -191,13 +210,15 @@ class YawController(Node):
         msg.d_term = d_component
         msg.p_gain = self.K_p
         msg.i_gain = self.K_i
-        msg.d_gain - self.K_d
+        msg.d_gain = self.K_d
         msg.error = error
         msg.derror = derror
         msg.output = torque
         # no integral limits. hashtag YOLO
         msg.i_max = math.nan
         msg.i_min = math.nan
+        
+        # self.pid_debug_pub.publish(msg)  # Actually publish the debug message
 
         self.last_time = time_now
         self.last_yaw = yaw
