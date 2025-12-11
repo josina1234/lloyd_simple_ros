@@ -104,12 +104,15 @@ class LloydPathPlanner(Node):
 
         #Create Publisher for final_goal
         self.final_goal_pub = self.create_publisher(msg_type=PointStamped, topic='~/final_goal_position', qos_profile=1)
+        
+        # create Publisher for initial POsition
+        self.init_position_pub = self.create_publisher(msg_type=PointStamped, topic='~/initial_position', qos_profile=1)
 
         # Create Publisher for theta value
         self.theta_pub = self.create_publisher(msg_type=Float64Stamped, topic='~/theta_value', qos_profile=1)
 
         # Create publisher für at goal
-        self.at_goal_pub = self.create_publisher(msg_type=BoolStamped, topic='~/at_goal', qos_profile=1)
+        self.mission_active_pub = self.create_publisher(msg_type=BoolStamped, topic='~/mission_active', qos_profile=1)
 
         # create Publisher for minimum distance to barriers
         self.min_dist_pub = self.create_publisher(msg_type=Float64Stamped, topic='~/min_distance_to_barriers', qos_profile=1)
@@ -229,17 +232,13 @@ class LloydPathPlanner(Node):
                 ('size', rclpy.Parameter.Type.DOUBLE),  # robot size
                 ('d1', rclpy.Parameter.Type.DOUBLE),
                 ('d2', rclpy.Parameter.Type.DOUBLE),
-                ('k', rclpy.Parameter.Type.INTEGER),
                 ('betaD', rclpy.Parameter.Type.DOUBLE),
                 ('beta_min', rclpy.Parameter.Type.DOUBLE),
                 ('encumbrance_barriers', rclpy.Parameter.Type.DOUBLE),
-                ('num_steps', rclpy.Parameter.Type.INTEGER),
                 ('waiting_time', rclpy.Parameter.Type.INTEGER),
-                ('bluerov_id', rclpy.Parameter.Type.INTEGER),
                 ('init_pos', rclpy.Parameter.Type.DOUBLE_ARRAY),  # Startposition
                 ('goal_pos', rclpy.Parameter.Type.DOUBLE_ARRAY),  # Zielposition
                 ('bluerov_names', rclpy.Parameter.Type.STRING_ARRAY),
-                ('random', rclpy.Parameter.Type.BOOL),
                 ('num_vehicles', rclpy.Parameter.Type.INTEGER),
             ],
             # alle Parameter, die für die Lloyd-Initialisierung benötigt werden
@@ -274,12 +273,10 @@ class LloydPathPlanner(Node):
         self.size = self.get_parameter('size').value
         self.d1 = self.get_parameter('d1').value
         self.d2 = self.get_parameter('d2').value
-        self.k = self.get_parameter('k').value
         self.betaD = self.get_parameter('betaD').value
         self.beta_min = self.get_parameter('beta_min').value
         self.encumbrance_barriers = self.get_parameter(
             'encumbrance_barriers').value
-        self.num_steps = self.get_parameter('num_steps').value
         self.waiting_time = self.get_parameter('waiting_time').value
         self.init_position = self.get_parameter(
             'init_pos').value  # double mit x und y position
@@ -290,8 +287,6 @@ class LloydPathPlanner(Node):
         
         self.current_goal_position = None  
         ##
-        self.bluerov_id = self.get_parameter(
-            'bluerov_id').value  # integer id des jeweiligen roboters
         self.num_vehicles = self.get_parameter(
             'num_vehicles').value  # Anzahl der Fahrzeuge im Netzwerk
         self.bluerov_names = self.get_parameter(
@@ -299,9 +294,6 @@ class LloydPathPlanner(Node):
         self.neighbour_positions = np.zeros(
             (self.num_vehicles - 1,
              2))  # speichert Positionen der Nachbarroboter
-        self.random = self.get_parameter(
-            'random'
-        ).value  # ob Start- und Zielpositionen randomisiert werden sollen
         # Dictionary für alle Roboterpositionen initialisieren
         self.robot_poses = {}
 
@@ -431,7 +423,9 @@ class LloydPathPlanner(Node):
         
         # Check if goal is reached
         if self.handle_mission_completed():
-            self.publish_at_goal()
+            self.publish_mission_active(False)
+        else:
+            self.publish_mission_active(True)
             # return    
         self.Lloyd_iteration()
 
@@ -472,10 +466,15 @@ class LloydPathPlanner(Node):
 
         # Publish self.beta for debugging
         self.publish_beta()
+        
         # Publish self.goal_position for debugging
         self.publish_temp_goal()
+
         # publish self.final_goal for debugging
         self.publish_final_goal()
+
+        # publish self.init_position for debugging
+        self.publish_initial_position()
 
         # publish self.theta for debugging
         self.publish_theta()
@@ -543,6 +542,16 @@ class LloydPathPlanner(Node):
         msg.point.z = -0.5  # Constant altitude
         self.final_goal_pub.publish(msg)
 
+    def publish_initial_position(self):
+        """Publish initial position for debugging"""
+        msg = PointStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'map'
+        msg.point.x = float(self.init_position[0])
+        msg.point.y = float(self.init_position[1])
+        msg.point.z = -0.5  # Constant altitude
+        self.init_position_pub.publish(msg)
+
     def publish_theta(self):
         """Publish theta value for debugging"""
         msg = Float64Stamped()
@@ -599,17 +608,16 @@ class LloydPathPlanner(Node):
         
         # Check if close enough to goal (within robot size)
         if distance_to_goal < self.size:
-            # self.get_logger().info(f'Robot {self.bluerov_id} reached its goal!')
             # self.do_stop()
             return True
         return False
     
-    def publish_at_goal(self):
+    def publish_mission_active(self, boolean):
         """Publish a message indicating the robot has reached its goal"""
         msg = BoolStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.data = True
-        self.at_goal_pub.publish(msg)
+        msg.data = boolean
+        self.mission_active_pub.publish(msg)
         # Here you can implement any additional logic needed when the robot reaches its goal
 
     def reset_internals(self):

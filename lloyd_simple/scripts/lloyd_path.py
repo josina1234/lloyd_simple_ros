@@ -345,59 +345,59 @@ class Lloyd:
         self.min_dist = dists_pi_to_barriers[min_dist_index] # für debugging und auswertung
 
         ###########################################
-        # barrier_point_closest = barrier_positions[min_dist_index]
+        barrier_point_closest = barrier_positions[min_dist_index]
 
-        # # now filter out all points that are behind that barrier point (encumbrance barrier)
-        # index = []
+        # now filter out all points that are behind that barrier point (encumbrance barrier)
+        index = []
 
-        # dx = self.current_position[0] - barrier_point_closest[0]
-        # dy = self.current_position[1] - barrier_point_closest[1]
+        dx = self.current_position[0] - barrier_point_closest[0]
+        dy = self.current_position[1] - barrier_point_closest[1]
 
-        # if abs(dx) < 0.001:
-        #     dx = 0.001  # avoid division by zero
-        # if abs(dy) < 0.001:
-        #     dy = 0.001  # avoid division by zero
+        if abs(dx) < 0.001:
+            dx = 0.001  # avoid division by zero
+        if abs(dy) < 0.001:
+            dy = 0.001  # avoid division by zero
 
-        # m = dy / dx  # slope
+        m = dy / dx  # slope
 
-        # if abs(m) < 0.001:
-        #     m = 0.001  # avoid division by zero
+        if abs(m) < 0.001:
+            m = 0.001  # avoid division by zero
 
-        # # coordinates of middle point
-        # xm = (self.current_position[0] + barrier_point_closest[0]) / 2
-        # ym = (self.current_position[1] + barrier_point_closest[1]) / 2
+        # coordinates of middle point
+        xm = (self.current_position[0] + barrier_point_closest[0]) / 2
+        ym = (self.current_position[1] + barrier_point_closest[1]) / 2
 
-        # # length of that vector
-        # dm = np.linalg.norm(
-        #     [xm - self.current_position[0], ym - self.current_position[1]])
+        # length of that vector
+        dm = np.linalg.norm(
+            [xm - self.current_position[0], ym - self.current_position[1]])
 
-        # # r < 1/2 dm --> r < 1/4 ||p_i - p_j|| --> delta_ij < 1/2 ||p_i - p_j||
-        # if dm < self.encumbrance + self.encumbrance_barriers_float:
-        #     normal_ij = np.array([dx, dy]) / np.linalg.norm([dx, dy])
-        #     solx = xm + (self.encumbrance + self.encumbrance_barriers_float - dm) * normal_ij[0]
-        #     soly = ym + (self.encumbrance + self.encumbrance_barriers_float - dm) * normal_ij[1]
+        # r < 1/2 dm --> r < 1/4 ||p_i - p_j|| --> delta_ij < 1/2 ||p_i - p_j||
+        if dm < self.encumbrance + self.encumbrance_barriers_float:
+            normal_ij = np.array([dx, dy]) / np.linalg.norm([dx, dy])
+            solx = xm + (self.encumbrance + self.encumbrance_barriers_float - dm) * normal_ij[0]
+            soly = ym + (self.encumbrance + self.encumbrance_barriers_float - dm) * normal_ij[1]
 
-        #     # Geradengleichung für Trennungslinie der Zelle aufstellen und umstellen
-        #     # y = - 1/m * (x - solx) + soly
-        #     # y + 1/m * (x - solx) - soly = 0
-        #     if self.current_position[1] + 1 / m * (
-        #             self.current_position[0] - solx) - soly > 0:
-        #         # Robot i is above the line
-        #         for k, point in enumerate(cell_points):
-        #             if point[1] + 1 / m * (point[0] - solx) - soly < 0:
-        #                 index.append(
-        #                     k)  # all points on the wrong side of the line
-        #     else:
-        #         # Robot i is below the line
-        #         for k, point in enumerate(cell_points):
-        #             if point[1] + 1 / m * (point[0] - solx) - soly > 0:
-        #                 index.append(
-        #                     k)  # all points on the wrong side of the line
-        # cell_points = [
-        #     point for k, point in enumerate(cell_points) if k not in index
-        # ]
+            # Geradengleichung für Trennungslinie der Zelle aufstellen und umstellen
+            # y = - 1/m * (x - solx) + soly
+            # y + 1/m * (x - solx) - soly = 0
+            if self.current_position[1] + 1 / m * (
+                    self.current_position[0] - solx) - soly > 0:
+                # Robot i is above the line
+                for k, point in enumerate(cell_points):
+                    if point[1] + 1 / m * (point[0] - solx) - soly < 0:
+                        index.append(
+                            k)  # all points on the wrong side of the line
+            else:
+                # Robot i is below the line
+                for k, point in enumerate(cell_points):
+                    if point[1] + 1 / m * (point[0] - solx) - soly > 0:
+                        index.append(
+                            k)  # all points on the wrong side of the line
+        cell_points = [
+            point for k, point in enumerate(cell_points) if k not in index
+        ]
 
-        return cell_points.tolist() # einbleinden wenn zusatzberechnung weg
+        return cell_points #.tolist() # einbleinden wenn zusatzberechnung weg
 
     def compute_scalar_values(self, x_cell, y_cell, goal):
         x_cell = np.array(x_cell)

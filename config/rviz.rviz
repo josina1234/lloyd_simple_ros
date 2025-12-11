@@ -13,10 +13,10 @@ Panels:
         - /ObstacleBoundaries_ROV001
         - /ObstacleBoundaries_ROV001/Topic1
         - /ObstacleBoundaries_ROV001/Namespaces1
+        - /final_goal001
+        - /temp_goal001
+        - /init_pos_001
         - /VehiclePose001
-        - /VehiclePose011
-        - /setpoint_011
-        - /setpoint_021
       Splitter Ratio: 0.47446808218955994
     Tree Height: 649
   - Class: rviz_common/Selection
@@ -161,6 +161,21 @@ Visualization Manager:
       Color: 46; 194; 126
       Enabled: true
       History Length: 1
+      Name: final_goal00
+      Radius: 0.20000000298023224
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov00/lloyd_path_planner/final_goal_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 112; 228; 21
+      Enabled: true
+      History Length: 1
       Name: temp_goal00
       Radius: 0.15000000596046448
       Topic:
@@ -170,6 +185,21 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /bluerov00/lloyd_path_planner/temp_goal_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 46; 194; 126
+      Enabled: true
+      History Length: 1
+      Name: init_pos_00
+      Radius: 0.10000000149011612
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov00/lloyd_path_planner/initial_position
       Value: true
     - Alpha: 1
       Axes Length: 0.30000001192092896
@@ -223,7 +253,7 @@ Visualization Manager:
     - Alpha: 1
       Class: rviz_default_plugins/PointStamped
       Color: 46; 194; 126
-      Enabled: true
+      Enabled: false
       History Length: 500
       Name: setpoint_00
       Radius: 0.05000000074505806
@@ -234,13 +264,12 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /bluerov00/setpoint_position
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/Marker
       Enabled: true
       Name: Marker01
       Namespaces:
-        bluerov: true
-        pool: false
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -302,7 +331,7 @@ Visualization Manager:
     - Alpha: 1
       Class: rviz_default_plugins/PointStamped
       Color: 255; 163; 72
-      Enabled: true
+      Enabled: false
       History Length: 500
       Name: setpoint_01
       Radius: 0.05000000074505806
@@ -313,7 +342,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /bluerov01/setpoint_position
-      Value: true
+      Value: false
     - Alpha: 1
       Axes Length: 0.30000001192092896
       Axes Radius: 0.05000000074505806
@@ -383,8 +412,7 @@ Visualization Manager:
       Enabled: true
       Name: Marker02
       Namespaces:
-        bluerov: true
-        pool: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -454,10 +482,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.564795970916748
+      Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 1.5522403717041016
+      Yaw: 1.5872400999069214
     Saved: ~
 Window Geometry:
   Displays:

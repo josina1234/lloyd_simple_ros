@@ -3,64 +3,49 @@
   ros__parameters:
     # === Roboter-PARAMETER ===
     radius: 1.0          # Sensorradius R_L [m]
-    size: 0.24           # Robotergröße (Radius) [m]
+    size: 0.28           # Robotergröße (Radius) [m]
     v_max: 5.0             # Maximale Geschwindigkeit (skalierung)
 
     # === LLOYD-ALGORITHMUS PARAMETER ===
-    d1: 0.4                # Skalierungsfaktor eq. (8)
-    d2: 0.72             # Skalierungsfaktor 3 * R_L, bei R_L kleiner als 1 muss Faktor auch kleiner 3 werden eq. (9)
-    k: 10                  # Steuerungsparameter k_p
+    d1: 0.3                # Skalierungsfaktor eq. (8)
+    d2: 0.84             # Skalierungsfaktor 3 * R_L, bei R_L kleiner als 1 muss Faktor auch kleiner 3 werden eq. (9)
     betaD: 0.1             # Gewünschter Spreading-Faktor
     beta_min: 0.01          # Minimaler Spreading-Faktor
     encumbrance_barriers: 0.05  # Abstand zu Hindernissen [m]
     
     # === SIMULATIONS-PARAMETER ===
-    num_steps: 5000        # Maximale Simulationsschritte
     flag_plot: false       # Visualisierung (für ROS2 meist false)
     write_file: false      # Datenaufzeichnung in Datei
     waiting_time: 400      # Wartezeit nach Konvergenz [Schritte]
     bluerov_names: ['bluerov00', 'bluerov01', 'bluerov02', 'bluerov03', 'bluerov04', 'bluerov05']
-    random: false
     start_offset_sec: 2.0  # Start offset in seconds
 
 /bluerov00/**:
   ros__parameters:
-    init_pos: [0.5, 0.5]   # Startposition [m]
-    init_yaw: 0.0          # Startausrichtung [rad]
-    goal_pos: [1.5, 3.5]
-    bluerov_id: 1
+    init_pos: [1.0, 0.5]   # Startposition [m]
+    goal_pos: [1.0, 3.5]
 
 /bluerov01/**:
   ros__parameters:
     init_pos: [1.5, 0.5]   # Startposition [m]
-    init_yaw: 0.0          # Startausrichtung [rad]
     goal_pos: [0.5, 3.5]
-    bluerov_id: 2
 
 /bluerov02/**:
   ros__parameters:
     init_pos: [1.7, 3.7]  # Startposition [m]
-    init_yaw: 0.0          # Startausrichtung [rad]
     goal_pos: [0.3, 0.3]
-    bluerov_id: 3
 
 /bluerov03/**:
   ros__parameters:
     init_pos: [0.3, 3.1]  # Startposition [m]
-    init_yaw: 0.0          # Startausrichtung [rad]
     goal_pos: [1.7, 0.9]
-    bluerov_id: 4
 
 /bluerov04/**:
   ros__parameters:
     init_pos: [1.0, 3.1]  # Startposition [m]
-    init_yaw: 0.0          # Startausrichtung [rad]
     goal_pos: [1.0, 0.9]
-    bluerov_id: 5
 
 /bluerov05/**:
   ros__parameters:
     init_pos: [1.7, 3.1]  # Startposition [m]
-    init_yaw: 0.0          # Startausrichtung [rad]
     goal_pos: [0.3, 0.9]
-    bluerov_id: 6

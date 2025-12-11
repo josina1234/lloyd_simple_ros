@@ -8,6 +8,7 @@ from geometry_msgs.msg import (
     Vector3Stamped,
 )
 from hippo_control_msgs.msg import ActuatorSetpoint
+from hippo_msgs.msg import Float64Stamped
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 from tf_transformations import euler_from_quaternion
@@ -28,6 +29,7 @@ class PositionController(Node):
         self.last_time = self.get_clock().now()
         self.last_position = np.zeros((3, 1))
         self.last_derror = np.zeros((3, 1))
+        self.last_velocity = 0.0
 
         self.declare_parameters(
             namespace='',
@@ -72,6 +74,10 @@ class PositionController(Node):
             msg_type=Vector3Stamped,
             topic='~/d_component_unfiltered',
             qos_profile=1,
+        )
+
+        self.velocity_pub = self.create_publisher(
+            Float64Stamped, '~/velocity', 1
         )
 
         self.thrust_pub = self.create_publisher(
@@ -175,8 +181,8 @@ class PositionController(Node):
 
         self.thrust_pub.publish(msg)
 
-    def moving_average_filter(self, derror):
-        return self.alpha * derror + (1 - self.alpha) * self.last_derror
+    def moving_average_filter(self, value, last_value):
+        return self.alpha * value + (1 - self.alpha) * last_value
 
     def apply_control(
         self,
@@ -197,7 +203,7 @@ class PositionController(Node):
         error = self.setpoint - current_position
         self.error_integral += dt * error
         dposition = (current_position - self.last_position) / max(dt, 1e-6)
-        derror = self.moving_average_filter(self.dsetpoint - dposition)
+        derror = self.moving_average_filter(self.dsetpoint - dposition, self.last_derror)
         p_component = self.K_p @ error
         d_component = self.K_d @ derror
         i_component = self.K_i @ self.error_integral
@@ -214,7 +220,7 @@ class PositionController(Node):
         thrust = p_component + d_component + i_component
 
         # thrust saturation
-        max_thrust = 0.5 # jeweils
+        max_thrust = 0.4 # jeweils
         for i, direction in enumerate(thrust):
             if direction > max_thrust:
                 thrust[i, 0] = max_thrust
@@ -245,6 +251,15 @@ class PositionController(Node):
         debug_msg.vector.y = d_component_unfiltered[1, 0]
         debug_msg.vector.z = d_component_unfiltered[2, 0]
         self.d_component_unfiltered_pub.publish(debug_msg)
+
+        # debug_msg for velocity dposition
+        velocity = np.linalg.norm(dposition)
+        velocity = self.moving_average_filter(velocity, self.last_velocity)
+        vel_msg = Float64Stamped()
+        vel_msg.header.stamp = time_now.to_msg()
+        vel_msg.data = velocity
+        self.velocity_pub.publish(vel_msg)
+        self.last_velocity = velocity
 
         self.last_time = time_now
         self.last_position = current_position
