@@ -329,6 +329,8 @@ class LloydPathPlanner(Node):
         self.Lloyd = Lloyd(self.radius, self.size, self.cell_resolution, 
                           self.encumbrance_barriers, self.all_barriers, 
                           self.basin_limits, self.obstacle_limits)
+                # Clear robot path when resetting
+        self.robot_path_points.clear()
 
     def init_services(self):
         self.start_service = self.create_service(
@@ -366,9 +368,6 @@ class LloydPathPlanner(Node):
         self.pose_received = True  # Mark that we've received pose data
         # Eigene Position in Dictionary speichern
         self.robot_poses[self.own_namespace] = msg.pose.pose  # aktualisiert die eigene Position im Dictionary
-        
-        # Add position to path tracking
-        self.add_position_to_path(msg.pose.pose.position)
         
         # Nach Update der eigenen Position Nachbarn neu berechnen
         self.update_neighbour_positions()
@@ -490,6 +489,9 @@ class LloydPathPlanner(Node):
             return
         
         self.now=self.get_clock().now()
+
+        # Add position to path tracking
+        self.add_position_to_path(self.current_pose.position)
 
         self.dt = (self.now - self.last_time).nanoseconds * 1e-9 if hasattr(self, 'last_time') else 0.02
 

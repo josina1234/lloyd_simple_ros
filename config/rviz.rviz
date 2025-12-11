@@ -48,7 +48,7 @@ Visualization Manager:
       Cell Size: 0.05000000074505806
       Class: rviz_default_plugins/Grid
       Color: 160; 160; 164
-      Enabled: true
+      Enabled: false
       Line Style:
         Line Width: 0.029999999329447746
         Value: Lines
@@ -61,7 +61,7 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 100
       Reference Frame: map
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/Marker
       Enabled: true
       Name: PathPlanner
@@ -434,7 +434,7 @@ Visualization Manager:
         Depth: 5
         Durability Policy: Volatile
         Filter size: 10
-        History Policy: Keep Last
+        History Policy: System Default
         Reliability Policy: Reliable
         Value: /bluerov00/lloyd_path_planner/robot_path
       Value: true
@@ -502,7 +502,7 @@ Visualization Manager:
       Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 1.5772401094436646
+      Yaw: 1.5672401189804077
     Saved: ~
 Window Geometry:
   Displays:
