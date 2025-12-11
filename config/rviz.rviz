@@ -17,6 +17,10 @@ Panels:
         - /temp_goal001
         - /init_pos_001
         - /VehiclePose001
+        - /Marker021
+        - /path001
+        - /path001/Topic1
+        - /path001/Namespaces1
       Splitter Ratio: 0.47446808218955994
     Tree Height: 649
   - Class: rviz_common/Selection
@@ -421,6 +425,19 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /bluerov02/robot_marker
       Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: path00
+      Namespaces:
+        robot_path: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov00/lloyd_path_planner/robot_path
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -485,7 +502,7 @@ Visualization Manager:
       Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 1.5872400999069214
+      Yaw: 1.5772401094436646
     Saved: ~
 Window Geometry:
   Displays:

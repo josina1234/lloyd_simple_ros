@@ -56,6 +56,12 @@ class LloydPathPlanner(Node):
         self.init_weighted_centroids_marker()
         self.weighted_centroids_pub = self.create_publisher(Marker, '~/weighted_centroids', 1)
         
+        # Initialize robot path tracking
+        self.robot_path_points = []
+        self.robot_path_marker: Marker
+        self.init_robot_path_marker()
+        self.robot_path_pub = self.create_publisher(Marker, '~/robot_path', 1)
+        
         self.setpoints = [] # zum Speichern der c1
 
         self.progress = -1.0
@@ -360,8 +366,56 @@ class LloydPathPlanner(Node):
         self.pose_received = True  # Mark that we've received pose data
         # Eigene Position in Dictionary speichern
         self.robot_poses[self.own_namespace] = msg.pose.pose  # aktualisiert die eigene Position im Dictionary
+        
+        # Add position to path tracking
+        self.add_position_to_path(msg.pose.pose.position)
+        
         # Nach Update der eigenen Position Nachbarn neu berechnen
         self.update_neighbour_positions()
+
+    def add_position_to_path(self, position):
+        """Add current position to the robot path for visualization"""
+        new_point = [position.x, position.y, position.z]
+        
+        # Only add if robot has moved significantly (avoid duplicate points)
+        if len(self.robot_path_points) == 0:
+            self.robot_path_points.append(new_point)
+        else:
+            last_point = self.robot_path_points[-1]
+            distance = np.sqrt((new_point[0] - last_point[0])**2 + 
+                             (new_point[1] - last_point[1])**2)
+            if distance > 0.01:  # Only add if moved more than 1cm
+                self.robot_path_points.append(new_point)
+        
+        # Publish updated path
+        self.publish_robot_path_marker()
+
+    def init_robot_path_marker(self):
+        """Initialize the robot path marker"""
+        msg = Marker()
+        msg.action = Marker.ADD
+        msg.ns = 'robot_path'
+        msg.id = 0
+        msg.type = Marker.LINE_STRIP
+        msg.header.frame_id = 'map'
+        msg.color.a = 1.0
+        msg.color.r = 0.0
+        msg.color.g = 1.0  # Green color for robot path
+        msg.color.b = 0.0
+        msg.scale.x = 0.02  # Smaller line width
+        msg.scale.y = 0.02
+        msg.scale.z = 0.02
+        self.robot_path_marker = msg
+
+    def publish_robot_path_marker(self):
+        """Publish the robot path as a continuous line marker"""
+        if len(self.robot_path_points) < 2:
+            return  # Need at least 2 points for a line
+        
+        msg = self.robot_path_marker
+        msg.points = [Point(x=p[0], y=p[1], z=p[2]) for p in self.robot_path_points]
+        msg.header.stamp = self.get_clock().now().to_msg()
+        self.robot_path_pub.publish(msg)
 
     def on_other_robot_pose(self, msg: PoseWithCovarianceStamped,
                             robot_name: str):
@@ -625,6 +679,8 @@ class LloydPathPlanner(Node):
         self.recomputation_required = True
         # Clear setpoints when resetting
         self.setpoints.clear()
+        # Clear robot path when resetting
+        self.robot_path_points.clear()
 
     def init_path_marker(self):
         msg = Marker()
