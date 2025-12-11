@@ -162,9 +162,9 @@ class YawController(Node):
             dt = (rclpy.time.Time.from_msg(msg.header.stamp) - self.last_setpoint_time).nanoseconds * 1e-9
             self.dsetpoint = self.wrap_pi(self.setpoint - old_setpoint) / max(dt, 1e-6)
             self.last_setpoint_time = rclpy.time.Time.from_msg(msg.header.stamp)
-            self.get_logger().info(f'Updated setpoint to movement direction: {self.setpoint:.3f} rad')
+        #     self.get_logger().info(f'Updated setpoint to movement direction: {self.setpoint:.3f} rad')
         
-        self.get_logger().info(f'Received yaw: {yaw:.3f} rad, setpoint: {self.setpoint:.3f} rad')
+        # self.get_logger().info(f'Received yaw: {yaw:.3f} rad, setpoint: {self.setpoint:.3f} rad')
         
         if not self.got_first_state:
             self.got_first_state = True

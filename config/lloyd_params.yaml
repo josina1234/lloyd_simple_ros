@@ -11,7 +11,7 @@
     d2: 0.72             # Skalierungsfaktor 3 * R_L, bei R_L kleiner als 1 muss Faktor auch kleiner 3 werden eq. (9)
     k: 10                  # Steuerungsparameter k_p
     betaD: 0.1             # Gewünschter Spreading-Faktor
-    beta_min: 0.1          # Minimaler Spreading-Faktor
+    beta_min: 0.01          # Minimaler Spreading-Faktor
     encumbrance_barriers: 0.05  # Abstand zu Hindernissen [m]
     
     # === SIMULATIONS-PARAMETER ===
@@ -21,7 +21,7 @@
     waiting_time: 400      # Wartezeit nach Konvergenz [Schritte]
     bluerov_names: ['bluerov00', 'bluerov01', 'bluerov02', 'bluerov03', 'bluerov04', 'bluerov05']
     random: false
-    start_offset_sec: 5.0  # Start offset in seconds
+    start_offset_sec: 10.0  # Start offset in seconds
 
 /bluerov00/**:
   ros__parameters:

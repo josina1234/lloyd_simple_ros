@@ -18,8 +18,9 @@ from launch_ros.actions import Node
 # change spawn positions in the function spawn_bluerovs
 #########
 
-def add_keyboard_control_node(context, launch_description: LaunchDescription) -> None:
+def add_keyboard_control_node(self, context, launch_description: LaunchDescription) -> None:
     names = context.launch_configurations['vehicle_names'].split(',')
+    self.get_logger().info(f"Vehicle names for keyboard control: {names}")
     first_namespace = names[0].strip() if names else 'bluerov00'
     second_namespace = names[1].strip() if names else 'bluerov01'
     third_namespace = names[2].strip() if len(names) > 2 else 'bluerov02'
@@ -49,7 +50,7 @@ def generate_launch_description():
     vehicle_names_arg = DeclareLaunchArgument(
         'vehicle_names',
         default_value='bluerov00,bluerov01',
-        description='Comma-separated list of vehicle names/namespaces to spawn.'
+        description='Comma-separated string of vehicle names/namespaces to spawn.'
     )
     start_gui_arg = DeclareLaunchArgument(
         'start_gui',
@@ -75,13 +76,16 @@ def generate_launch_description():
     # Spawn n BlueROVs
     lloyd_simple_path = get_package_share_path('lloyd_simple')
     def spawn_bluerovs(context):
-        names = context.launch_configurations['vehicle_names'].split(',')
-        # exception wenn mehr als 4 fahrzeuge
-        if len(names) > 4:
-            raise RuntimeError(f"You tried to spawn {len(names)} vehicles, but the maximum is 4.")
-        # exception wenn namen nicht eindeutig
-        if len(set(names)) != len(names):
-            raise RuntimeError(f"Vehicle names must be unique. You provided: {names}")
+        
+        names = context.launch_configurations['vehicle_names'] # here still of type string
+        if len(context.launch_configurations['vehicle_names']) > 10:
+            names = names.split(',') # convert to list if multiple names are given
+            # exception wenn mehr als 4 fahrzeuge
+            if len(names) > 4:
+                raise RuntimeError(f"You tried to spawn {len(names)} vehicles, but the maximum is 4.")
+            # exception wenn namen nicht eindeutig
+            if len(set(names)) != len(names):
+                raise RuntimeError(f"Vehicle names must be unique. You provided: {names}")
         
         # TODO hier Paramter zum Spawnen anpassen
         xi = [0.5, 1.5, 0.5, 1.5] # Spawnpositionen x für bis zu 4 Fahrzeuge
@@ -90,20 +94,35 @@ def generate_launch_description():
         Yi = [1.5708, 1.5708, 1.5708, 1.5708] # Spawnwinkel (Yaw) für bis zu 4 Fahrzeuge
         actions = []
         spawn_path = str(lloyd_simple_path / 'launch/spawn_bluerov.launch.py') # pfad zur abgeänderten Launchfile (original: hippo_sim)
-        for i, name in enumerate(names):
+
+        if type(names) == list:
+            for i, name in enumerate(names):
+                args = {
+                    'vehicle_name': TextSubstitution(text=name.strip()),
+                    'use_sim_time': TextSubstitution(text='true'),
+                    'x' : TextSubstitution(text=str(xi[i])),
+                    'y' : TextSubstitution(text=str(yi[i])),
+                    'z' : TextSubstitution(text=str(zi[i])),
+                    'Y' : TextSubstitution(text=str(Yi[i])),
+                }
+                source = PythonLaunchDescriptionSource(spawn_path)
+                actions.append(
+                IncludeLaunchDescription(source, launch_arguments=args.items())
+                )   
+        else:
             args = {
-                'vehicle_name': TextSubstitution(text=name.strip()),
+                'vehicle_name': TextSubstitution(text=names.strip()),
                 'use_sim_time': TextSubstitution(text='true'),
-                'x' : TextSubstitution(text=str(xi[i])),
-                'y' : TextSubstitution(text=str(yi[i])),
-                'z' : TextSubstitution(text=str(zi[i])),
-                'Y' : TextSubstitution(text=str(Yi[i])),
+                'x' : TextSubstitution(text=str(xi[0])),
+                'y' : TextSubstitution(text=str(yi[0])),
+                'z' : TextSubstitution(text=str(zi[0])),
+                'Y' : TextSubstitution(text=str(Yi[0])),
             }
             source = PythonLaunchDescriptionSource(spawn_path)
             actions.append(
                 IncludeLaunchDescription(source, launch_arguments=args.items())
             )
-        add_keyboard_control_node(context, launch_description=launch_description)
+    
         return actions
 
     launch_description.add_action(OpaqueFunction(function=spawn_bluerovs))

@@ -62,8 +62,6 @@ def add_auv_groups(context, *args, **kwargs):
         package_path / 'config/position_controller_config.yaml')
     yaw_controller_params_file_path = str(package_path /
                                           'config/yaw_controller_config.yaml')
-    path_follower_params_file_path = str(package_path /
-                                         'config/path_follower_config.yaml')
     barriers_file_path = str(package_path / 'config/barriers.yaml')
     lloyd_parameters_file_path = str(package_path / 'config/lloyd_params.yaml')
 

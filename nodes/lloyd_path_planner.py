@@ -106,6 +106,12 @@ class LloydPathPlanner(Node):
         # Create publisher für at goal
         self.at_goal_pub = self.create_publisher(msg_type=BoolStamped, topic='~/at_goal', qos_profile=1)
 
+        # create Publisher for minimum distance to barriers
+        self.min_dist_pub = self.create_publisher(msg_type=Float64Stamped, topic='~/min_distance_to_barriers', qos_profile=1)
+
+        # create publisher for size of cell - for debugging and evaluation
+        self.cell_size_pub = self.create_publisher(msg_type=Float64Stamped, topic='~/cell_size', qos_profile=1)
+
         self.initialize_lloyd_algorithm()
 
     def on_start_time(self, msg: Time):
@@ -176,11 +182,11 @@ class LloydPathPlanner(Node):
         self.c1 = np.zeros((2, 1))  # initial centroid positions - Fixed dimensions
         self.c2 = np.zeros((2, 1))  # initial centroid positions without neighbours - Fixed dimensions
         self.c1_no_rotation = np.zeros((2, 1))  # initial centroid positions without rotation rule - Fixed dimensions
-        self.c2_no_rotation = np.zeros((2, 1))  # initial centroid positions without neighbours and rotation rule #TODO ggf unnötig - Fixed dimensions
+        # self.c2_no_rotation = np.zeros((2, 1))  # initial centroid positions without neighbours and rotation rule #TODO ggf unnötig - Fixed dimensions
         self.flag = 0  # ACHTUNG ggf Fehler wegen Wechsel auf Integer vs np.array
         # Initialization of the flag that indicates if the robot i is in its goal region
         self.flag_convergence = 0  # Initialization of the flag that indicates if all the robots have entered their goal regions
-        self.theta = 0  # ACHTUNG ggf Fehler wegen Wechsel auf Integer vs np.array
+        self.theta = 0.0  # ACHTUNG ggf Fehler wegen Wechsel auf Integer vs np.array
         # initialization of current orientations
         self.current_position = None  # TODO
         self.Lloyd = None
@@ -243,15 +249,11 @@ class LloydPathPlanner(Node):
 
     def initialize_lloyd_algorithm(self):
         """Lloyd-Algorithmus Initialisierung"""
-        self.c1 = np.zeros((2, 1))  # initial centroid position
-        self.c2 = np.zeros((2, 1))  # initial centroid ohne nachbarn und hindernisse
-        self.c1_no_rotation = np.zeros((2, 1))  # initial centroid position without rotation rule
-        self.theta = 0  # Fixed initialization
+        
         self.Lloyd = None
-        self.beta = self.betaD  # spreading faktor - use betaD as initial value
         self.final_goal = copy.deepcopy(self.goal_position)  # Zwischenspeicher
 
-        self.dt = 0.02  # 50Hz timer period instead of 0.25
+        # self.dt = 0.02  # 50Hz timer period instead of 0.25
 
         #erstellung des lloyd-objektes - Fix initialization
         self.Lloyd = Lloyd(self.radius, self.size, self.cell_resolution, 
@@ -353,8 +355,8 @@ class LloydPathPlanner(Node):
             
         # Check if goal is reached
         if self.handle_mission_completed():
-            return
-            
+            self.publish_at_goal()
+            # return    
         self.Lloyd_iteration()
 
     def Lloyd_iteration(self):
@@ -362,6 +364,10 @@ class LloydPathPlanner(Node):
         if self.own_namespace not in self.robot_poses:
             self.get_logger().warn('Own position not available yet')
             return
+        
+        self.now=self.get_clock().now()
+
+        self.dt = (self.now - self.last_time).nanoseconds * 1e-9 if hasattr(self, 'last_time') else 0.02
 
         current_position = [
             self.robot_poses[self.own_namespace].position.x,
@@ -397,13 +403,19 @@ class LloydPathPlanner(Node):
 
         # publish self.theta for debugging
         self.publish_theta()
-        #
+
+        # publish min distance to barriers
+        self.publish_min_dist()
+
+        # publish cell size for debugging and evaluation
+        self.publish_cellsize()
 
         # # Lloyd-Algorithmus mit aktuellen Daten ausführen - Debug output
         # self.get_logger().debug(f'Current position: {current_position.flatten()}')
         # self.get_logger().debug(f'Current neighbours: {len(neighbours)} robots')
         # self.get_logger().debug(f'Goal position: {self.goal_position.flatten()}')
         # self.get_logger().debug(f'Setpoint: {self.c1.flatten()}')
+        self.last_time = self.now
 
     def publish_setpoint(self):
         """Publish setpoint for position controller based on Lloyd centroid"""
@@ -411,7 +423,7 @@ class LloydPathPlanner(Node):
             return
          # gewünschter message type: PointStanmed
         msg = PointStamped()
-        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.stamp = self.now.to_msg()
         msg.header.frame_id = 'map'
         
         # make z a constant altitude at -0.5 meters
@@ -431,14 +443,14 @@ class LloydPathPlanner(Node):
     def publish_beta(self):
         """Publish beta value for debugging"""
         msg = Float64Stamped()
-        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.stamp = self.now.to_msg()
         msg.data = float(self.beta)
         self.beta_pub.publish(msg)
 
     def publish_temp_goal(self):
         """Publish temporary goal position for debugging"""
         msg = PointStamped()
-        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.stamp = self.now.to_msg()
         msg.header.frame_id = 'map'
         msg.point.x = float(self.goal_position[0])
         msg.point.y = float(self.goal_position[1])
@@ -448,7 +460,7 @@ class LloydPathPlanner(Node):
     def publish_final_goal(self):
         """Publish final goal position for debugging"""
         msg = PointStamped()
-        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.stamp = self.now.to_msg()
         msg.header.frame_id = 'map'
         msg.point.x = float(self.final_goal[0])
         msg.point.y = float(self.final_goal[1])
@@ -458,9 +470,25 @@ class LloydPathPlanner(Node):
     def publish_theta(self):
         """Publish theta value for debugging"""
         msg = Float64Stamped()
-        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.stamp = self.now.to_msg()
         msg.data = float(self.theta)
         self.theta_pub.publish(msg)
+
+    def publish_min_dist(self):
+        """Publish minimum distance to barriers for debugging"""
+        min_dist = self.Lloyd.get_minimum_distance_to_barriers()
+        msg = Float64Stamped()
+        msg.header.stamp = self.now.to_msg()
+        msg.data = float(min_dist)
+        self.min_dist_pub.publish(msg)
+
+    def publish_cellsize(self):
+        """Publish cell size for debugging and evaluation"""
+        cell_size = self.Lloyd.get_cell_size()
+        msg = Float64Stamped()
+        msg.header.stamp = self.now.to_msg()
+        msg.data = float(cell_size)
+        self.cell_size_pub.publish(msg)
 
     def serve_start(self, request, response):
         if self.state != State.NORMAL_OPERATION:
@@ -496,7 +524,6 @@ class LloydPathPlanner(Node):
         # Check if close enough to goal (within robot size)
         if distance_to_goal < self.size:
             # self.get_logger().info(f'Robot {self.bluerov_id} reached its goal!')
-            self.publish_at_goal()
             # self.do_stop()
             return True
         return False
