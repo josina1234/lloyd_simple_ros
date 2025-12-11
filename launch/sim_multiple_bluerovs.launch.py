@@ -88,8 +88,8 @@ def generate_launch_description():
                 raise RuntimeError(f"Vehicle names must be unique. You provided: {names}")
         
         # TODO hier Paramter zum Spawnen anpassen
-        xi = [0.5, 1.5, 0.5, 1.5] # Spawnpositionen x für bis zu 4 Fahrzeuge
-        yi = [0.5, 0.5, 1.5, 1.5] 
+        xi = [0.8, 1.0, 0.5, 1.5] # Spawnpositionen x für bis zu 4 Fahrzeuge
+        yi = [0.8, 0.8, 1.5, 1.5] 
         zi = [-0.5, -0.5, -0.5, -0.5]
         Yi = [1.5708, 1.5708, 1.5708, 1.5708] # Spawnwinkel (Yaw) für bis zu 4 Fahrzeuge
         actions = []

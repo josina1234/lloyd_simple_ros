@@ -8,6 +8,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPo
 import argparse
 from geometry_msgs.msg import Point
 from visualization_msgs.msg import Marker
+from hippo_msgs.msg import BoolStamped
 
 class StartCoordinator(Node):
     def __init__(self, mission_ns='mission'): # 50 seconds offset
@@ -18,10 +19,23 @@ class StartCoordinator(Node):
             parameters=[
                 ('start_offset_sec', rclpy.Parameter.Type.DOUBLE),
                 ('obstacle_limits_x', rclpy.Parameter.Type.DOUBLE_ARRAY),
-                ('obstacle_limits_y', rclpy.Parameter.Type.DOUBLE_ARRAY)
+                ('obstacle_limits_y', rclpy.Parameter.Type.DOUBLE_ARRAY),
+                ('vehicle_names', rclpy.Parameter.Type.STRING_ARRAY),
             ]
         )
         self.start_offset_sec = float(self.get_parameter('start_offset_sec').value)
+        
+        # Parse vehicle names - handle both STRING_ARRAY and STRING types
+        vehicle_names_param = self.get_parameter('vehicle_names').value
+        if isinstance(vehicle_names_param, list):
+            # Already a list (STRING_ARRAY)
+            self.vehicle_names = [name.strip() for name in vehicle_names_param if name.strip()]
+        else:
+            # String that needs to be split (STRING)
+            self.vehicle_names = [name.strip() for name in vehicle_names_param.split(',') if name.strip()]
+        self.vehicle_ready_status = {name: False for name in self.vehicle_names}
+        
+        self.get_logger().info(f'Monitoring vehicles: {self.vehicle_names}')
 
         start_qos = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
@@ -31,8 +45,17 @@ class StartCoordinator(Node):
         )
         self.start_pub = self.create_publisher(Time, f'/{mission_ns}/start', start_qos)
 
-        # Veröffentliche Startzeit einmal, kurz in der Zukunft
-        self.timer = self.create_timer(0.2, self.publish_once)
+        # Create subscribers dynamically for each vehicle
+        self.ready_subscribers = {}
+        for vehicle_name in self.vehicle_names:
+            callback = lambda msg, name=vehicle_name: self.on_vehicle_ready(msg, name)
+            subscriber = self.create_subscription(
+                BoolStamped, 
+                f'/{vehicle_name}/ready', 
+                callback, 
+                1
+            )
+            self.ready_subscribers[vehicle_name] = subscriber
 
         # Initialize obstacle boundaries with proper QoS
         obstacle_qos = QoSProfile(
@@ -52,6 +75,27 @@ class StartCoordinator(Node):
         self.obstacle_timer = self.create_timer(1.0, self.publish_obstacle_boundaries)
         self.obstacle_publish_count = 0
 
+        # Wait for all vehicles to be ready
+        while not self.all_vehicles_ready():
+            self.get_logger().info(f'Waiting for vehicles to be ready: {self.get_not_ready_vehicles()}', once=True)
+            rclpy.spin_once(self, timeout_sec=1.0)
+
+        self.timer = self.create_timer(0.2, self.publish_once)
+
+    def all_vehicles_ready(self):
+        """Check if all vehicles are ready"""
+        return all(self.vehicle_ready_status.values())
+    
+    def get_not_ready_vehicles(self):
+        """Get list of vehicles that are not ready yet"""
+        return [name for name, ready in self.vehicle_ready_status.items() if not ready]
+
+    def on_vehicle_ready(self, msg: BoolStamped, vehicle_name: str):
+        """Generic callback for vehicle ready messages"""
+        if msg.data and not self.vehicle_ready_status[vehicle_name]:
+            self.get_logger().info(f'Received ready signal from {vehicle_name}.')
+            self.vehicle_ready_status[vehicle_name] = True
+
     def publish_once(self):
         now = self.get_clock().now()
         start_time = (now + rclpy.time.Duration(seconds=self.start_offset_sec)).to_msg()
@@ -60,7 +104,7 @@ class StartCoordinator(Node):
             f'Published start_time={start_time.sec}.{start_time.nanosec:09d} (offset={self.start_offset_sec}s)'
         )
         self.timer.cancel()
-
+    
     def init_obstacle_boundaries_marker(self):
         msg = Marker()
         msg.action = Marker.ADD

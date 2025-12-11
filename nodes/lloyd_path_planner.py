@@ -14,13 +14,14 @@ from geometry_msgs.msg import (
     Quaternion,
 )
 from hippo_msgs.msg import Float64Stamped, BoolStamped
-from nav_msgs.msg import Path
+
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import Header
 from std_srvs.srv import Trigger
 from tf_transformations import euler_from_quaternion, quaternion_from_euler
 from visualization_msgs.msg import Marker
+from scenario_msgs.srv import MoveToStart
 
 from lloyd_simple.scripts.barriers import barriers
 from lloyd_simple.scripts.lloyd_path import Lloyd, applyrules
@@ -58,6 +59,10 @@ class LloydPathPlanner(Node):
         self.setpoints = [] # zum Speichern der c1
 
         self.progress = -1.0
+
+        # Add flag to track if we have received pose data
+        self.pose_received = False
+        self.at_start_position = False
 
         self.compute_full_path = False  # TODO ggf unnötig
         self.init_params()  # bereits mit eigenen Parametern ersetzt
@@ -112,7 +117,71 @@ class LloydPathPlanner(Node):
         # create publisher for size of cell - for debugging and evaluation
         self.cell_size_pub = self.create_publisher(msg_type=Float64Stamped, topic='~/cell_size', qos_profile=1)
 
-        self.initialize_lloyd_algorithm()
+        self.ready_pub = self.create_publisher(BoolStamped, 'ready', 1) # bluerovxy/ready topic
+
+        # Don't call move_to_start() immediately - wait for pose data
+        # self.move_to_start()  # Remove this line
+
+        # Create timer to check when to start moving to start position
+        self.start_timer = self.create_timer(0.1, self.check_start_conditions)
+        
+        self.initialize_lloyd_algorithm() # erst wenn alle roboter am start sind
+        #
+
+    def check_start_conditions(self):
+        """Check if conditions are met to start moving to start position"""
+        if self.pose_received and not self.at_start_position:
+            self.start_timer.destroy()  # Stop the timer
+            self.move_to_start()
+
+    def move_to_start(self):
+        """Move robot to its start position using a timer-based approach"""
+        self.state = State.MOVE_TO_START
+        self.get_logger().info(f'{self.own_namespace}: starting move to start position {self.init_position}')
+        
+        # Create timer for moving to start position
+        self.move_timer = self.create_timer(0.1, self.move_to_start_callback)
+
+    def move_to_start_callback(self):
+        """Timer callback for moving to start position"""
+        if not hasattr(self, 'current_pose'):
+            return
+            
+        # Publish setpoint to move to start position
+        self.publish_setpoint(np.array(self.init_position))
+        
+        # Check distance to start position
+        current_pos = np.array([
+            self.current_pose.position.x,
+            self.current_pose.position.y
+        ])
+        dist_to_start = np.linalg.norm(self.init_position - current_pos)
+        
+        if dist_to_start <= 0.1:
+            if not hasattr(self, 'start_reached_time'):
+                # First time reaching start position
+                self.start_reached_time = self.get_clock().now()
+                self.get_logger().info(f'{self.own_namespace}: reached start position, stabilizing...')
+            else:
+                # Check if we've been at start position for 5 seconds
+                elapsed_time = (self.get_clock().now() - self.start_reached_time).nanoseconds / 1e9
+                if elapsed_time >= 5.0:
+                    # Stop the timer and publish ready
+                    self.move_timer.destroy()
+                    self.at_start_position = True
+                    
+                    # Publish ready message
+                    ready_msg = BoolStamped()
+                    ready_msg.header.stamp = self.get_clock().now().to_msg()
+                    ready_msg.data = True
+                    self.ready_pub.publish(ready_msg)
+                    
+                    self.get_logger().info(f'{self.own_namespace}: stabilized at start position, ready!')
+                    self.state = State.IDLE  # Changed from NORMAL_OPERATION to IDLE
+        else:
+            # Reset start time if we moved away from start position
+            if hasattr(self, 'start_reached_time'):
+                delattr(self, 'start_reached_time')
 
     def on_start_time(self, msg: Time):
         """Callback for receiving start time"""
@@ -136,6 +205,7 @@ class LloydPathPlanner(Node):
             time.sleep(wait_duration)
 
         self.get_logger().info(f'{self.own_namespace}: starting Lloyd algorithm now.')
+        self.ready = True  # Set ready flag to True
         self.state = State.NORMAL_OPERATION
 
     def init_params(self):
@@ -247,6 +317,8 @@ class LloydPathPlanner(Node):
 
         self.start_time_msg = None  # to store received start time message
 
+        self.ready = False  # indicates if ready to start Lloyd algorithm
+
     def initialize_lloyd_algorithm(self):
         """Lloyd-Algorithmus Initialisierung"""
         
@@ -293,6 +365,7 @@ class LloydPathPlanner(Node):
     def on_pose(self, msg: PoseWithCovarianceStamped):
         """Callback für eigene Position"""
         self.current_pose = msg.pose.pose
+        self.pose_received = True  # Mark that we've received pose data
         # Eigene Position in Dictionary speichern
         self.robot_poses[self.own_namespace] = msg.pose.pose  # aktualisiert die eigene Position im Dictionary
         # Nach Update der eigenen Position Nachbarn neu berechnen
@@ -353,6 +426,9 @@ class LloydPathPlanner(Node):
         if self.own_namespace not in self.robot_poses:
             return
             
+        if not self.ready:
+            return
+        
         # Check if goal is reached
         if self.handle_mission_completed():
             self.publish_at_goal()
@@ -392,7 +468,7 @@ class LloydPathPlanner(Node):
                    self.final_goal, self.c1_no_rotation, self.goal_position)
 
         # Publish setpoint for position controller
-        self.publish_setpoint()
+        self.publish_setpoint(self.c1)
 
         # Publish self.beta for debugging
         self.publish_beta()
@@ -417,25 +493,25 @@ class LloydPathPlanner(Node):
         # self.get_logger().debug(f'Setpoint: {self.c1.flatten()}')
         self.last_time = self.now
 
-    def publish_setpoint(self):
+    def publish_setpoint(self, point):
         """Publish setpoint for position controller based on Lloyd centroid"""
         if self.c1 is None or not hasattr(self, 'current_pose'):
             return
          # gewünschter message type: PointStanmed
         msg = PointStamped()
-        msg.header.stamp = self.now.to_msg()
+        msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = 'map'
         
         # make z a constant altitude at -0.5 meters
         # Convert centroid to position
-        msg.point.x = float(self.c1[0])
-        msg.point.y = float(self.c1[1])
+        msg.point.x = float(point[0])
+        msg.point.y = float(point[1])
         msg.point.z = -0.5  # Constant altitude at -0.5 meters
         
         self.setpoint_pub.publish(msg)
         
         # Store setpoint for debugging
-        self.setpoints.append([float(self.c1[0]), float(self.c1[1])])
+        self.setpoints.append([float(point[0]), float(point[1])])
         
         # Publish weighted centroids marker
         self.publish_weighted_centroids_marker()
@@ -443,14 +519,14 @@ class LloydPathPlanner(Node):
     def publish_beta(self):
         """Publish beta value for debugging"""
         msg = Float64Stamped()
-        msg.header.stamp = self.now.to_msg()
+        msg.header.stamp = self.get_clock().now().to_msg()
         msg.data = float(self.beta)
         self.beta_pub.publish(msg)
 
     def publish_temp_goal(self):
         """Publish temporary goal position for debugging"""
         msg = PointStamped()
-        msg.header.stamp = self.now.to_msg()
+        msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = 'map'
         msg.point.x = float(self.goal_position[0])
         msg.point.y = float(self.goal_position[1])
@@ -460,7 +536,7 @@ class LloydPathPlanner(Node):
     def publish_final_goal(self):
         """Publish final goal position for debugging"""
         msg = PointStamped()
-        msg.header.stamp = self.now.to_msg()
+        msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = 'map'
         msg.point.x = float(self.final_goal[0])
         msg.point.y = float(self.final_goal[1])
@@ -470,7 +546,7 @@ class LloydPathPlanner(Node):
     def publish_theta(self):
         """Publish theta value for debugging"""
         msg = Float64Stamped()
-        msg.header.stamp = self.now.to_msg()
+        msg.header.stamp = self.get_clock().now().to_msg()
         msg.data = float(self.theta)
         self.theta_pub.publish(msg)
 
@@ -478,7 +554,7 @@ class LloydPathPlanner(Node):
         """Publish minimum distance to barriers for debugging"""
         min_dist = self.Lloyd.get_minimum_distance_to_barriers()
         msg = Float64Stamped()
-        msg.header.stamp = self.now.to_msg()
+        msg.header.stamp = self.get_clock().now().to_msg()
         msg.data = float(min_dist)
         self.min_dist_pub.publish(msg)
 
@@ -486,7 +562,7 @@ class LloydPathPlanner(Node):
         """Publish cell size for debugging and evaluation"""
         cell_size = self.Lloyd.get_cell_size()
         msg = Float64Stamped()
-        msg.header.stamp = self.now.to_msg()
+        msg.header.stamp = self.get_clock().now().to_msg()
         msg.data = float(cell_size)
         self.cell_size_pub.publish(msg)
 
