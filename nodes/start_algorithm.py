@@ -21,6 +21,8 @@ class StartCoordinator(Node):
                 ('obstacle_limits_x', rclpy.Parameter.Type.DOUBLE_ARRAY),
                 ('obstacle_limits_y', rclpy.Parameter.Type.DOUBLE_ARRAY),
                 ('vehicle_names', rclpy.Parameter.Type.STRING_ARRAY),
+                ('pool_limits_x', rclpy.Parameter.Type.DOUBLE_ARRAY),
+                ('pool_limits_y', rclpy.Parameter.Type.DOUBLE_ARRAY),
             ]
         )
         self.start_offset_sec = float(self.get_parameter('start_offset_sec').value)
@@ -75,6 +77,25 @@ class StartCoordinator(Node):
         self.obstacle_timer = self.create_timer(1.0, self.publish_obstacle_boundaries)
         self.obstacle_publish_count = 0
 
+                # Initialize obstacle boundaries with proper QoS
+        pool_qos = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL
+        )
+
+        # pool boundaries publishing
+        self.pool_boundaries_marker: Marker
+        self.init_pool_boundaries_marker()
+        self.pool_limits_x = self.get_parameter('pool_limits_x').value
+        self.pool_limits_y = self.get_parameter('pool_limits_y').value
+        self.pool_boundaries_pub = self.create_publisher(Marker, '~/pool_boundaries', pool_qos)
+
+        #timer for repeated pool boundaries publishing
+        self.pool_timer = self.create_timer(1.0, self.publish_pool_boundaries)
+        self.pool_publish_count = 0
+
         # Wait for all vehicles to be ready
         while not self.all_vehicles_ready():
             self.get_logger().info(f'Waiting for vehicles to be ready: {self.get_not_ready_vehicles()}', once=True)
@@ -121,6 +142,22 @@ class StartCoordinator(Node):
         msg.scale.z = 0.03
         self.obstacle_boundaries_marker = msg
 
+    def init_pool_boundaries_marker(self):
+        msg = Marker()
+        msg.action = Marker.ADD
+        msg.ns = 'pool_boundaries'
+        msg.id = 0
+        msg.type = Marker.LINE_STRIP
+        msg.header.frame_id = 'map'
+        msg.color.a = 1.0
+        msg.color.r = 1.0
+        msg.color.g = 0.0
+        msg.color.b = 0.0
+        msg.scale.x = 0.03
+        msg.scale.y = 0.03
+        msg.scale.z = 0.03
+        self.pool_boundaries_marker = msg
+
     def publish_obstacle_boundaries(self):
         """Publish obstacle boundaries as line strip markers"""
         # Only publish first 5 times to avoid spam, but ensure delivery
@@ -157,6 +194,41 @@ class StartCoordinator(Node):
         self.obstacle_publish_count += 1
         self.get_logger().info(f'Published obstacle boundaries for visualization (attempt {self.obstacle_publish_count})')
 
+    def publish_pool_boundaries(self):
+        """Publish pool boundaries as line strip markers"""
+        # Only publish first 5 times to avoid spam, but ensure delivery
+        if self.pool_publish_count >= 5:
+            self.pool_timer.cancel()
+            return
+            
+        msg = self.pool_boundaries_marker
+        
+        # Create boundary points from pool limits
+        boundary_points = []
+        
+        # Add rectangle boundary points (clockwise)
+        x_min, x_max = self.pool_limits_x[0], self.pool_limits_x[1]
+        y_min, y_max = self.pool_limits_y[0], self.pool_limits_y[1]
+        
+        # Bottom edge (left to right)
+        boundary_points.append(Point(x=x_min, y=y_min, z=-0.5))
+        boundary_points.append(Point(x=x_max, y=y_min, z=-0.5))
+        
+        # Right edge (bottom to top)
+        boundary_points.append(Point(x=x_max, y=y_max, z=-0.5))
+        
+        # Top edge (right to left)
+        boundary_points.append(Point(x=x_min, y=y_max, z=-0.5))
+        
+        # Left edge (top to bottom) - close the loop
+        boundary_points.append(Point(x=x_min, y=y_min, z=-0.5))
+        
+        msg.points = boundary_points
+        msg.header.stamp = self.get_clock().now().to_msg()
+        self.pool_boundaries_pub.publish(msg)
+        
+        self.pool_publish_count += 1
+        self.get_logger().info(f'Published pool boundaries for visualization (attempt {self.pool_publish_count})')
 def main():
     rclpy.init()
     parser = argparse.ArgumentParser()

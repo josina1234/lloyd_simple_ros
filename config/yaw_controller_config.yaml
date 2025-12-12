@@ -7,3 +7,27 @@
       d: 0.3
     filter_gain: 0.1
     min_movement_threshold: 0.01
+# Szenario 1 & 2
+/bluerov00/**:
+  ros__parameters:
+    init_yaw: 1.57  # Start yaw in rad
+# Szenario 2
+/bluerov01/**:
+  ros__parameters:
+    init_yaw: -1.57  # Start yaw in rad
+# Szenario 3
+/bluerov02/**:
+  ros__parameters:
+    init_yaw: -1.57  # 
+# Szenario 3
+/bluerov03/**:
+  ros__parameters:
+    init_yaw: 1.57  # Start yaw in rad
+# Szenario 3
+/bluerov04/**:
+  ros__parameters:
+    init_yaw: 1.57  # Start yaw in rad
+# Szenario 3
+/bluerov05/**:
+  ros__parameters:
+    init_yaw: 1.57  # Start yaw in rad

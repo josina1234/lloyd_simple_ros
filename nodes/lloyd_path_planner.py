@@ -56,12 +56,6 @@ class LloydPathPlanner(Node):
         self.init_weighted_centroids_marker()
         self.weighted_centroids_pub = self.create_publisher(Marker, '~/weighted_centroids', 1)
         
-        # Initialize robot path tracking
-        self.robot_path_points = []
-        self.robot_path_marker: Marker
-        self.init_robot_path_marker()
-        self.robot_path_pub = self.create_publisher(Marker, '~/robot_path', 1)
-        
         self.setpoints = [] # zum Speichern der c1
 
         self.progress = -1.0
@@ -75,6 +69,12 @@ class LloydPathPlanner(Node):
 
         self.init_services()
         self.init_robot_subscribers()  # Neue Methode für Multi-Robot Subscriber
+
+        # Initialize robot path tracking (vision_pose_cov)
+        self.robot_path_points = []
+        self.robot_path_marker: Marker
+        self.init_robot_path_marker()
+        self.robot_path_pub = self.create_publisher(Marker, '~/robot_path', 1)
 
 
         start_qos = QoSProfile(
@@ -128,6 +128,9 @@ class LloydPathPlanner(Node):
 
         self.ready_pub = self.create_publisher(BoolStamped, 'ready', 1) # bluerovxy/ready topic
 
+        # debugging timer for condition publishing
+        self.condition_pub = self.create_publisher(msg_type=Float64Stamped, topic='~/condition', qos_profile=1)
+
         # Don't call move_to_start() immediately - wait for pose data
         # self.move_to_start()  # Remove this line
 
@@ -172,9 +175,9 @@ class LloydPathPlanner(Node):
                 self.start_reached_time = self.get_clock().now()
                 self.get_logger().info(f'{self.own_namespace}: reached start position, stabilizing...')
             else:
-                # Check if we've been at start position for 5 seconds
+                # Check if we've been at start position for 1 second
                 elapsed_time = (self.get_clock().now() - self.start_reached_time).nanoseconds / 1e9
-                if elapsed_time >= 5.0:
+                if elapsed_time >= 1.0:
                     # Stop the timer and publish ready
                     self.move_timer.destroy()
                     self.at_start_position = True
@@ -244,8 +247,12 @@ class LloydPathPlanner(Node):
                 ('waiting_time', rclpy.Parameter.Type.INTEGER),
                 ('init_pos', rclpy.Parameter.Type.DOUBLE_ARRAY),  # Startposition
                 ('goal_pos', rclpy.Parameter.Type.DOUBLE_ARRAY),  # Zielposition
-                ('bluerov_names', rclpy.Parameter.Type.STRING_ARRAY),
+                ('vehicle_names', rclpy.Parameter.Type.STRING_ARRAY),
                 ('num_vehicles', rclpy.Parameter.Type.INTEGER),
+                ('red', rclpy.Parameter.Type.DOUBLE),
+                ('green', rclpy.Parameter.Type.DOUBLE),
+                ('blue', rclpy.Parameter.Type.DOUBLE),
+                ('epsilon', rclpy.Parameter.Type.DOUBLE),  # aus lloyd_params.yaml
             ],
             # alle Parameter, die für die Lloyd-Initialisierung benötigt werden
         )
@@ -290,18 +297,27 @@ class LloydPathPlanner(Node):
             'goal_pos').value  # double mit x und y position
         # Convert goal_position to numpy array for Lloyd algorithm
         self.goal_position = np.array(self.goal_position)
+        # colors for robot path marker
+        self.red = self.get_parameter('red').value
+        self.green = self.get_parameter('green').value
+        self.blue = self.get_parameter('blue').value
+        # epsilon
+        self.epsilon = self.get_parameter('epsilon').value  # aus lloyd_params.yaml
         
         self.current_goal_position = None  
         ##
         self.num_vehicles = self.get_parameter(
             'num_vehicles').value  # Anzahl der Fahrzeuge im Netzwerk
-        self.bluerov_names = self.get_parameter(
-            'bluerov_names').value  # Liste der Roboternamen
+        self.vehicle_names = self.get_parameter(
+            'vehicle_names').value  # Liste der Roboternamen
         self.neighbour_positions = np.zeros(
             (self.num_vehicles - 1,
              2))  # speichert Positionen der Nachbarroboter
         # Dictionary für alle Roboterpositionen initialisieren
         self.robot_poses = {}
+
+        # for debugging
+        self.condition = 0  # to track which rule was applied
 
 
         ###########################################################
@@ -328,7 +344,7 @@ class LloydPathPlanner(Node):
         #erstellung des lloyd-objektes - Fix initialization
         self.Lloyd = Lloyd(self.radius, self.size, self.cell_resolution, 
                           self.encumbrance_barriers, self.all_barriers, 
-                          self.basin_limits, self.obstacle_limits)
+                          self.basin_limits, self.obstacle_limits, self.epsilon)
                 # Clear robot path when resetting
         self.robot_path_points.clear()
 
@@ -342,14 +358,18 @@ class LloydPathPlanner(Node):
         """Erstellt Subscriber für alle anderen Roboter im Netzwerk"""
         self.robot_pose_subscribers = {}
 
-        # for schleife soll nur num_vehicles viele strings in self.bluerov_names berücksichtigen
-        for robot_name in self.bluerov_names[:self.num_vehicles]:
+        self.get_logger().info(f'{self.own_namespace}: initializing robot subscribers for other robots.')
+
+        # for schleife soll nur num_vehicles viele strings in self.vehicle_names berücksichtigen
+        for robot_name in self.vehicle_names:
             if robot_name == self.own_namespace:
                 # Eigenen Subscriber überspringen
                 continue
 
             # Topic-Name für anderen Roboter
             topic_name = f'/{robot_name}/vision_pose_cov'
+
+            self.get_logger().info(f'{self.own_namespace} Subscribing to {topic_name}')
 
             # Callback-Funktion mit Lambda für jeweiligen Roboter
             callback = lambda msg, name=robot_name: self.on_other_robot_pose(
@@ -398,9 +418,9 @@ class LloydPathPlanner(Node):
         msg.type = Marker.LINE_STRIP
         msg.header.frame_id = 'map'
         msg.color.a = 1.0
-        msg.color.r = 0.0
-        msg.color.g = 1.0  # Green color for robot path
-        msg.color.b = 0.0
+        msg.color.r = self.red
+        msg.color.g = self.green  # Green color for robot path
+        msg.color.b = self.blue
         msg.scale.x = 0.02  # Smaller line width
         msg.scale.y = 0.02
         msg.scale.z = 0.02
@@ -479,6 +499,7 @@ class LloydPathPlanner(Node):
             self.publish_mission_active(False)
         else:
             self.publish_mission_active(True)
+            self.publish_condition()
             # return    
         self.Lloyd_iteration()
 
@@ -513,7 +534,7 @@ class LloydPathPlanner(Node):
         self.c1, self.c2, self.c1_no_rotation = self.Lloyd.get_centroid()
 
         # Apply rules to update beta, theta, and goal_position
-        self.goal_position, self.beta, self.theta = applyrules(self.d1, self.d2, self.dt, self.betaD, self.beta_min,
+        self.goal_position, self.beta, self.theta, self.condition = applyrules(self.d1, self.d2, self.dt, self.betaD, self.beta_min,
                    self.beta, current_position, self.c1, self.c2, self.theta,
                    self.final_goal, self.c1_no_rotation, self.goal_position)
 
@@ -535,8 +556,8 @@ class LloydPathPlanner(Node):
         # publish self.theta for debugging
         self.publish_theta()
 
-        # publish min distance to barriers
-        self.publish_min_dist()
+        # # publish min distance to barriers
+        # self.publish_min_dist()
 
         # publish cell size for debugging and evaluation
         self.publish_cellsize()
@@ -631,6 +652,13 @@ class LloydPathPlanner(Node):
         msg.data = float(cell_size)
         self.cell_size_pub.publish(msg)
 
+    def publish_condition(self):
+        """Publish condition value for debugging"""
+        msg = Float64Stamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.data = float(self.condition)
+        self.condition_pub.publish(msg)
+
     def serve_start(self, request, response):
         if self.state != State.NORMAL_OPERATION:
             self.get_logger().info('Starting Lloyd algorithm normal operation.')
@@ -693,8 +721,8 @@ class LloydPathPlanner(Node):
         msg.header.frame_id = 'map'
         msg.color.a = 1.0
         msg.color.r = 0.0
-        msg.color.g = 1.0
-        msg.color.b = 0.0
+        msg.color.g = 0.0
+        msg.color.b = 1.0
         msg.scale.x = 0.02
         msg.scale.y = 0.02
         msg.scale.z = 0.02

@@ -19,12 +19,6 @@ class YawController(Node):
             depth=1,
         )
 
-        # default value for the yaw setpoint
-        self.setpoint = 0.0 + math.pi / 2  # Facing "forward" along the x-axis
-        self.setpoint_timed_out = False  # Changed: always have a valid setpoint
-        self.dsetpoint = 0.0
-        self.last_setpoint_time = self.get_clock().now()
-
         # Position tracking for movement direction
         self.last_position = None
         self.current_position = None
@@ -45,6 +39,7 @@ class YawController(Node):
                 ('gains.d', rclpy.Parameter.Type.DOUBLE),
                 ('filter_gain', rclpy.Parameter.Type.DOUBLE),
                 ('min_movement_threshold', rclpy.Parameter.Type.DOUBLE),  # Added parameter
+                ('init_yaw', rclpy.Parameter.Type.DOUBLE),  # Added parameter
             ],
         )
         param = self.get_parameter('gains.p')
@@ -65,6 +60,16 @@ class YawController(Node):
 
         param = self.get_parameter('min_movement_threshold')
         self.min_movement_threshold = param.value
+
+        param = self.get_parameter('init_yaw')
+        self.setpoint = param.value
+        self.get_logger().info(f'Initial yaw setpoint: {self.setpoint} rad')
+        self.get_logger().info(f'vorheriger setpoint: {math.pi/2} rad')
+
+        # default value for the yaw setpoint
+        self.setpoint_timed_out = False  # Changed: always have a valid setpoint
+        self.dsetpoint = 0.0
+        self.last_setpoint_time = self.get_clock().now()
 
         self.add_on_set_parameters_callback(self.on_params_changed)
 
@@ -159,6 +164,7 @@ class YawController(Node):
             ############################################
             # self.setpoint = movement_dir
             # CHANGE HERRE FOR ADAPTIVE YAW SETPOINT BASED ON MOVEMENT DIRECTION
+            ############################################
             dt = (rclpy.time.Time.from_msg(msg.header.stamp) - self.last_setpoint_time).nanoseconds * 1e-9
             self.dsetpoint = self.wrap_pi(self.setpoint - old_setpoint) / max(dt, 1e-6)
             self.last_setpoint_time = rclpy.time.Time.from_msg(msg.header.stamp)

@@ -64,6 +64,7 @@ def add_auv_groups(context, *args, **kwargs):
                                           'config/yaw_controller_config.yaml')
     barriers_file_path = str(package_path / 'config/barriers.yaml')
     lloyd_parameters_file_path = str(package_path / 'config/lloyd_params.yaml')
+    path_colours_file_path = str(package_path / 'config/path_colours.yaml')
 
     # Zugriff auf die vehicle_names aus dem LaunchConfiguration
     vehicle_names_str = context.launch_configurations['vehicle_names']
@@ -83,7 +84,7 @@ def add_auv_groups(context, *args, **kwargs):
             'vehicle_names': vehicle_names,
             },
             lloyd_parameters_file_path,
-            barriers_file_path
+            barriers_file_path,
         ],
     )
 
@@ -103,9 +104,11 @@ def add_auv_groups(context, *args, **kwargs):
                         'use_sim_time': LaunchConfiguration('use_sim_time'),
                         'num_vehicles': num_vehicles,
                         'vehicle_name': vehicle_name,
+                        'vehicle_names': vehicle_names,
                     },
                     barriers_file_path,
                     lloyd_parameters_file_path,
+                    path_colours_file_path,
                 ],
                 output='screen',
                 emulate_tty=True,

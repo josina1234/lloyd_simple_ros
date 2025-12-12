@@ -24,8 +24,8 @@ import math
 class Lloyd:
 
     def __init__(self, radius, encumbrance_i, step_size, encumbrance_barriers,
-                 all_barriers, basin_limits,
-                 obstacle_limits):  #ggf noch v_max TODO
+                 all_barriers, basin_limits, obstacle_limits,
+                 epsilon):  #ggf noch v_max TODO
         # initialisieren des Klassenobjektes des i-ten Roboters
         self.radius = radius  # same for all robots
         self.encumbrance = encumbrance_i
@@ -35,7 +35,7 @@ class Lloyd:
         self.basin_limits = np.array(basin_limits)
         self.obstacle_limits = np.array(obstacle_limits)
 
-        self.epsilon = 0.0  # epsilon adaptation parameter for more cautelative/aggressive behaviour
+        self.epsilon = epsilon  # epsilon adaptation parameter for more cautelative/aggressive behaviour
 
     # wird in jeder Iteration aufgerufen und deklariert die Nachbarpositionen neu
     def aggregate(self, neighbour_positions, beta_i, goal_position_i,
@@ -76,8 +76,12 @@ class Lloyd:
 
         if len(self.barrier_positions) > 0:
             # 1 --> initial voronoi cell filtering considering barriers
-            cell_points = self.find_closest_points_epsilon(
-                circle_points, self.barrier_positions)
+            if self.epsilon is not 0:
+                cell_points = self.find_closest_points_epsilon(
+                    circle_points, self.barrier_positions)
+            else:
+                cell_points = self.find_closest_points(
+                    circle_points, self.barrier_positions)  # tupel-list
 
             # 2 --> filter out points too close to barriers and all points behind barriers (encumbrance barriers)
             cell_points = self.consider_barriers(cell_points)
@@ -93,8 +97,12 @@ class Lloyd:
             # later Case: delta_ij <= (||p_i - n_j||)/2
             # cell_points are all q within circle with ||q-p_i|| < ||q-n_j|| for all neighbours j
 
-            cell_points = self.find_closest_points_epsilon(
-                cell_points, self.neighbour_positions)  # tupel-list
+            if self.epsilon is not 0:
+                cell_points = self.find_closest_points_epsilon(
+                    cell_points, self.neighbour_positions)  # tupel-list
+            else:
+                cell_points = self.find_closest_points(
+                    cell_points, self.neighbour_positions)  # tupel-list
 
             # 2 --> filter cell points considering encumbrances
             # Case: delta_ij > (||p_i - n_j||)/2
@@ -105,7 +113,8 @@ class Lloyd:
                 cell_points = [self.current_position]
 
         ## Größe der Zelle als Anhaltspunkt für Engheit der Umgebung
-        self.cell_size = len(cell_points) # anzahl der koordinatenpunkte in der zelle
+        self.cell_size = len(
+            cell_points)  # anzahl der koordinatenpunkte in der zelle
 
         x_cell, y_cell = zip(
             *cell_points)  # unzip tupel-list (* is unpacking operator)
@@ -231,6 +240,29 @@ class Lloyd:
 
     def consider_encumbrances(self, cell_points):
 
+        ###########################################
+        #effizienter?
+        ########################################
+
+        # safety_margin = self.encumbrance*2
+
+        # # find barrier point distances from robot position to barriers
+        # dists_pi_to_nj = np.linalg.norm(self.current_position -
+        #                                       self.neighbour_positions,
+        #                                       axis=1)
+        # too_close_neighbours_indices = np.where(
+        #     dists_pi_to_nj < 2*safety_margin)[0]
+        # #
+        # close_neighbour_positions = self.neighbour_positions[too_close_neighbours_indices]
+        # # now move all these points away from the robot, so they have distance 2*safety_margin
+        # close_neighbour_distances_to_pi = dists_pi_to_nj[too_close_neighbours_indices]
+        # vectors = (self.current_position - close_neighbour_positions) / close_neighbour_distances_to_pi[:, np.newaxis]
+
+        # close_neighbour_positions = close_neighbour_positions + vectors * (2*safety_margin - close_neighbour_distances_to_pi)[:, np.newaxis]
+
+        # cell_points = self.find_closest_points(cell_points, close_neighbour_positions)
+        ###########################################
+        ###########################################
         index = []
         for j, neighbour in enumerate(self.neighbour_positions):
             # encumbrance of neighbours
@@ -278,10 +310,10 @@ class Lloyd:
                         if point[1] + 1 / m * (point[0] - solx) - soly > 0:
                             index.append(
                                 k)  # all points on the wrong side of the line
-        cell_points_filtered = [
+        cell_points = [
             point for k, point in enumerate(cell_points) if k not in index
         ]
-        return cell_points_filtered
+        return cell_points
 
     def consider_barriers(self, cell_points):
         # encumbrance of barriers
@@ -333,71 +365,43 @@ class Lloyd:
         dists_to_barriers = np.linalg.norm(
             np.array(cell_points)[:, np.newaxis] - barrier_positions, axis=2)
         safety_margin = self.encumbrance_barriers_float + self.encumbrance
+
+        # transfer these points to h
+    
         valid_indices = np.all(dists_to_barriers > safety_margin, axis=1)
 
         cell_points = np.array(cell_points)[valid_indices]
 
-        ###########################################
-        # find barrier point with minimum distance from robot position to barriers
-        dists_pi_to_barriers = np.linalg.norm(self.current_position - barrier_positions,
+        # find barrier distances from robot position to barriers
+        dists_pi_to_barriers = np.linalg.norm(self.current_position -
+                                              barrier_positions,
                                               axis=1)
+        
+        # ------------------ debugging ----------------------
+
         min_dist_index = np.argmin(dists_pi_to_barriers)
-        self.min_dist = dists_pi_to_barriers[min_dist_index] # für debugging und auswertung
+        self.min_dist = dists_pi_to_barriers[
+            min_dist_index]  # für debugging und auswertung
+        # ------------------ debugging ----------------------
 
-        ###########################################
-        barrier_point_closest = barrier_positions[min_dist_index]
+        
+        ############################################
+        # effizienter
+        ############################################
 
-        # now filter out all points that are behind that barrier point (encumbrance barrier)
-        index = []
+        # too_close_barriers_indices = np.where(
+        #     dists_pi_to_barriers < 2*safety_margin)[0]
+        # #
+        # close_barrier_positions = barrier_positions[too_close_barriers_indices]
+        # # now move all these points away from the robot, so they have distance 2*safety_margin
+        # close_barrier_distances_to_pi = dists_pi_to_barriers[too_close_barriers_indices]
+        # vectors = (self.current_position - close_barrier_positions) / close_barrier_distances_to_pi[:, np.newaxis]
 
-        dx = self.current_position[0] - barrier_point_closest[0]
-        dy = self.current_position[1] - barrier_point_closest[1]
+        # close_barrier_positions = close_barrier_positions + vectors * (2*safety_margin - close_barrier_distances_to_pi)[:, np.newaxis]
 
-        if abs(dx) < 0.001:
-            dx = 0.001  # avoid division by zero
-        if abs(dy) < 0.001:
-            dy = 0.001  # avoid division by zero
+        # cell_points = self.find_closest_points(cell_points, close_barrier_positions)
 
-        m = dy / dx  # slope
-
-        if abs(m) < 0.001:
-            m = 0.001  # avoid division by zero
-
-        # coordinates of middle point
-        xm = (self.current_position[0] + barrier_point_closest[0]) / 2
-        ym = (self.current_position[1] + barrier_point_closest[1]) / 2
-
-        # length of that vector
-        dm = np.linalg.norm(
-            [xm - self.current_position[0], ym - self.current_position[1]])
-
-        # r < 1/2 dm --> r < 1/4 ||p_i - p_j|| --> delta_ij < 1/2 ||p_i - p_j||
-        if dm < self.encumbrance + self.encumbrance_barriers_float:
-            normal_ij = np.array([dx, dy]) / np.linalg.norm([dx, dy])
-            solx = xm + (self.encumbrance + self.encumbrance_barriers_float - dm) * normal_ij[0]
-            soly = ym + (self.encumbrance + self.encumbrance_barriers_float - dm) * normal_ij[1]
-
-            # Geradengleichung für Trennungslinie der Zelle aufstellen und umstellen
-            # y = - 1/m * (x - solx) + soly
-            # y + 1/m * (x - solx) - soly = 0
-            if self.current_position[1] + 1 / m * (
-                    self.current_position[0] - solx) - soly > 0:
-                # Robot i is above the line
-                for k, point in enumerate(cell_points):
-                    if point[1] + 1 / m * (point[0] - solx) - soly < 0:
-                        index.append(
-                            k)  # all points on the wrong side of the line
-            else:
-                # Robot i is below the line
-                for k, point in enumerate(cell_points):
-                    if point[1] + 1 / m * (point[0] - solx) - soly > 0:
-                        index.append(
-                            k)  # all points on the wrong side of the line
-        cell_points = [
-            point for k, point in enumerate(cell_points) if k not in index
-        ]
-
-        return cell_points #.tolist() # einbleinden wenn zusatzberechnung weg
+        return cell_points  #.tolist() # einbleinden wenn zusatzberechnung weg
 
     def compute_scalar_values(self, x_cell, y_cell, goal):
         x_cell = np.array(x_cell)
@@ -424,12 +428,12 @@ class Lloyd:
         x_new = x + error[0] * self.dt
         y_new = y + error[1] * self.dt
         return np.array([x_new, y_new])
-    
+
     def get_minimum_distance_to_barriers(self):
-        return self.min_dist # for debugging and evaluation
-    
+        return self.min_dist  # for debugging and evaluation
+
     def get_cell_size(self):
-        return self.cell_size # for debugging and evaluation
+        return self.cell_size  # for debugging and evaluation
 
 
 def applyrules(d1, d2, dt, beta_d, beta_min, beta, current_position, c1, c2,
@@ -441,18 +445,27 @@ def applyrules(d1, d2, dt, beta_d, beta_min, beta, current_position, c1, c2,
     alpha = np.pi / 2  # adjustable maximum angle offset
     # first condition for beta and theta update (theta is angle offset, just anpother way to represent rotation)
     if dist_c1_c2 > d2 and np.linalg.norm(current_position - c1) < d1:
-        beta = max(beta - dt, beta_min)
-        theta = min(theta + dt, alpha)
+        beta = max(beta - beta * dt, beta_min)
+        if theta == 0.0:
+            theta = min(theta + dt, alpha)
+        else:
+            theta = min(theta + theta * dt, alpha)
+        # for debugging
+        condition = 1
     # second condition
     else:
         beta = beta - dt * (beta - beta_d)
-        theta = max(0, theta - dt)
+        theta = max(0, theta - theta * dt)
+        # for debugging
+        condition = 0
 
     # third condition (p_z_temp = Rp_z and ||p_i-c1|| < ||p_i - c1_no_rotation||)
     if theta == alpha and np.linalg.norm(
             current_position -
             np.array(c1_no_rotation)) > np.linalg.norm(current_position - c1):
         theta = 0
+        # for debugging
+        condition = 2
 
     # compute the angle and new position
     angle = np.arctan2(final_goal[1] - current_position[1],
@@ -466,4 +479,4 @@ def applyrules(d1, d2, dt, beta_d, beta_min, beta, current_position, c1, c2,
         new_angle)  # new goalposition y
     # BlueRovs.destinations[i][0] = current_position
 
-    return goal_position, beta, theta
+    return goal_position, beta, theta, condition

@@ -1,0 +1,36 @@
+# grün Szenario 1 & 2
+/bluerov00/**:
+  ros__parameters:
+    red: 0.0
+    green: 1.0
+    blue: 0.0
+#organge Szenario 2
+/bluerov01/**:
+  ros__parameters:
+    red: 1.0
+    green: 0.53
+    blue: 0.0
+# grün Szenario 3
+/bluerov02/**:
+  ros__parameters:
+    red: 0.0
+    green: 1.0
+    blue: 0.0
+# orange Szenario 3
+/bluerov03/**:
+  ros__parameters:
+    red: 1.0
+    green: 0.53
+    blue: 0.0
+# lila Szenario 3
+/bluerov04/**:
+  ros__parameters:
+    red: 0.5
+    green: 0.0
+    blue: 0.5
+# blau Szenario 3
+/bluerov05/**:
+  ros__parameters:
+    red: 0.0
+    green: 0.0
+    blue: 1.0

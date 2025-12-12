@@ -38,6 +38,7 @@ class PositionController(Node):
                 ('gains.i', rclpy.Parameter.Type.DOUBLE),
                 ('gains.d', rclpy.Parameter.Type.DOUBLE),
                 ('filter_gain', rclpy.Parameter.Type.DOUBLE),
+                ('max_thrust', rclpy.Parameter.Type.DOUBLE),
             ],
         )
         param = self.get_parameter('gains.p')
@@ -55,6 +56,10 @@ class PositionController(Node):
         param = self.get_parameter('filter_gain')
         self.get_logger().info(f'{param.name}={param.value}')
         self.alpha = param.value
+
+        param = self.get_parameter('max_thrust')
+        self.get_logger().info(f'{param.name}={param.value}')
+        self.max_thrust = param.value
 
         self.add_on_set_parameters_callback(self.on_params_changed)
 
@@ -220,12 +225,11 @@ class PositionController(Node):
         thrust = p_component + d_component + i_component
 
         # thrust saturation
-        max_thrust = 0.4 # jeweils
         for i, direction in enumerate(thrust):
-            if direction > max_thrust:
-                thrust[i, 0] = max_thrust
-            elif direction < -max_thrust:
-                thrust[i, 0] = -max_thrust
+            if direction > self.max_thrust:
+                thrust[i, 0] = self.max_thrust
+            elif direction < -self.max_thrust:
+                thrust[i, 0] = -self.max_thrust
 
         debug_msg = Vector3Stamped()
         debug_msg.header.stamp = time_now.to_msg()

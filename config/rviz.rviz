@@ -4,23 +4,16 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
         - /Grid1/Offset1
-        - /PathPlanner1
         - /PathPlanner1/Topic1
         - /PathPlanner1/Namespaces1
-        - /WeightedCentroids_ROV001
-        - /WeightedCentroids_ROV011
-        - /ObstacleBoundaries_ROV001
-        - /ObstacleBoundaries_ROV001/Topic1
-        - /ObstacleBoundaries_ROV001/Namespaces1
-        - /final_goal001
-        - /temp_goal001
-        - /init_pos_001
-        - /VehiclePose001
-        - /Marker021
-        - /path001
+        - /ObstacleBoundaries1
+        - /ObstacleBoundaries1/Topic1
+        - /ObstacleBoundaries1/Namespaces1
         - /path001/Topic1
         - /path001/Namespaces1
+        - /pool_boundaries1
       Splitter Ratio: 0.47446808218955994
     Tree Height: 649
   - Class: rviz_common/Selection
@@ -63,7 +56,7 @@ Visualization Manager:
       Reference Frame: map
       Value: false
     - Class: rviz_default_plugins/Marker
-      Enabled: true
+      Enabled: false
       Name: PathPlanner
       Namespaces:
         {}
@@ -74,7 +67,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /bluerov00/path_planner/marker
-      Value: true
+      Value: false
     - Alpha: 0.30000001192092896
       Binary representation: false
       Binary threshold: 100
@@ -149,7 +142,7 @@ Visualization Manager:
       Value: false
     - Class: rviz_default_plugins/Marker
       Enabled: true
-      Name: ObstacleBoundaries_ROV00
+      Name: ObstacleBoundaries
       Namespaces:
         obstacle_boundaries: true
       Topic:
@@ -166,7 +159,7 @@ Visualization Manager:
       Enabled: true
       History Length: 1
       Name: final_goal00
-      Radius: 0.20000000298023224
+      Radius: 0.15000000596046448
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -177,10 +170,70 @@ Visualization Manager:
       Value: true
     - Alpha: 1
       Class: rviz_default_plugins/PointStamped
+      Color: 255; 120; 0
+      Enabled: true
+      History Length: 1
+      Name: final_goal01
+      Radius: 0.15000000596046448
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov01/lloyd_path_planner/final_goal_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 46; 194; 126
+      Enabled: true
+      History Length: 1
+      Name: final_goal02
+      Radius: 0.15000000596046448
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov02/lloyd_path_planner/final_goal_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 255; 120; 0
+      Enabled: true
+      History Length: 1
+      Name: final_goal03
+      Radius: 0.15000000596046448
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov03/lloyd_path_planner/final_goal_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 145; 65; 172
+      Enabled: true
+      History Length: 1
+      Name: final_goal04
+      Radius: 0.15000000596046448
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov04/lloyd_path_planner/final_goal_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
       Color: 112; 228; 21
       Enabled: true
       History Length: 1
-      Name: temp_goal00
+      Name: temp_goal_00
       Radius: 0.15000000596046448
       Topic:
         Depth: 5
@@ -189,6 +242,66 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /bluerov00/lloyd_path_planner/temp_goal_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 255; 163; 72
+      Enabled: true
+      History Length: 1
+      Name: temp_goal_01
+      Radius: 0.15000000596046448
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov01/lloyd_path_planner/temp_goal_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 25; 255; 0
+      Enabled: true
+      History Length: 1
+      Name: temp_goal_02
+      Radius: 0.15000000596046448
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov02/lloyd_path_planner/temp_goal_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 255; 163; 72
+      Enabled: true
+      History Length: 1
+      Name: temp_goal_03
+      Radius: 0.15000000596046448
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov03/lloyd_path_planner/temp_goal_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 220; 138; 221
+      Enabled: true
+      History Length: 1
+      Name: temp_goal_04
+      Radius: 0.15000000596046448
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov04/lloyd_path_planner/temp_goal_position
       Value: true
     - Alpha: 1
       Class: rviz_default_plugins/PointStamped
@@ -204,6 +317,66 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /bluerov00/lloyd_path_planner/initial_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 255; 120; 0
+      Enabled: true
+      History Length: 1
+      Name: init_pos_01
+      Radius: 0.10000000149011612
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov01/lloyd_path_planner/initial_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 46; 194; 126
+      Enabled: true
+      History Length: 1
+      Name: init_pos_02
+      Radius: 0.10000000149011612
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov02/lloyd_path_planner/initial_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 255; 120; 0
+      Enabled: true
+      History Length: 1
+      Name: init_pos_03
+      Radius: 0.10000000149011612
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov03/lloyd_path_planner/initial_position
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 145; 65; 172
+      Enabled: true
+      History Length: 1
+      Name: init_pos_04
+      Radius: 0.10000000149011612
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov04/lloyd_path_planner/initial_position
       Value: true
     - Alpha: 1
       Axes Length: 0.30000001192092896
@@ -239,48 +412,6 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /bluerov00/vision_pose_cov
-      Value: true
-    - Class: rviz_default_plugins/Marker
-      Enabled: true
-      Name: Marker00
-      Namespaces:
-        bluerov: true
-        pool: true
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /bluerov00/robot_marker
-      Value: true
-    - Alpha: 1
-      Class: rviz_default_plugins/PointStamped
-      Color: 46; 194; 126
-      Enabled: false
-      History Length: 500
-      Name: setpoint_00
-      Radius: 0.05000000074505806
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /bluerov00/setpoint_position
-      Value: false
-    - Class: rviz_default_plugins/Marker
-      Enabled: true
-      Name: Marker01
-      Namespaces:
-        {}
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /bluerov01/robot_marker
       Value: true
     - Alpha: 1
       Axes Length: 0.30000001192092896
@@ -318,36 +449,6 @@ Visualization Manager:
         Value: /bluerov01/vision_pose_cov
       Value: true
     - Alpha: 1
-      Class: rviz_default_plugins/PointStamped
-      Color: 255; 163; 72
-      Enabled: true
-      History Length: 1
-      Name: temp_goal_01
-      Radius: 0.15000000596046448
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /bluerov01/lloyd_path_planner/temp_goal_position
-      Value: true
-    - Alpha: 1
-      Class: rviz_default_plugins/PointStamped
-      Color: 255; 163; 72
-      Enabled: false
-      History Length: 500
-      Name: setpoint_01
-      Radius: 0.05000000074505806
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /bluerov01/setpoint_position
-      Value: false
-    - Alpha: 1
       Axes Length: 0.30000001192092896
       Axes Radius: 0.05000000074505806
       Class: rviz_default_plugins/PoseWithCovariance
@@ -383,34 +484,101 @@ Visualization Manager:
         Value: /bluerov02/vision_pose_cov
       Value: true
     - Alpha: 1
-      Class: rviz_default_plugins/PointStamped
-      Color: 192; 97; 203
+      Axes Length: 0.30000001192092896
+      Axes Radius: 0.05000000074505806
+      Class: rviz_default_plugins/PoseWithCovariance
+      Color: 255; 25; 0
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: false
       Enabled: true
-      History Length: 500
-      Name: setpoint_02
-      Radius: 0.05000000074505806
+      Head Length: 0.30000001192092896
+      Head Radius: 0.10000000149011612
+      Name: VehiclePose03
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Axes
       Topic:
         Depth: 5
         Durability Policy: Volatile
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /bluerov02/setpoint_position
+        Value: /bluerov03/vision_pose_cov
       Value: true
     - Alpha: 1
-      Class: rviz_default_plugins/PointStamped
-      Color: 192; 97; 203
+      Axes Length: 0.30000001192092896
+      Axes Radius: 0.05000000074505806
+      Class: rviz_default_plugins/PoseWithCovariance
+      Color: 255; 25; 0
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: false
       Enabled: true
-      History Length: 1
-      Name: temp_goal_02
-      Radius: 0.15000000596046448
+      Head Length: 0.30000001192092896
+      Head Radius: 0.10000000149011612
+      Name: VehiclePose04
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Axes
       Topic:
         Depth: 5
         Durability Policy: Volatile
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /bluerov02/lloyd_path_planner/temp_goal_position
+        Value: /bluerov04/vision_pose_cov
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Marker00
+      Namespaces:
+        bluerov: true
+        pool: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov00/robot_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Marker01
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov01/robot_marker
       Value: true
     - Class: rviz_default_plugins/Marker
       Enabled: true
@@ -427,9 +595,80 @@ Visualization Manager:
       Value: true
     - Class: rviz_default_plugins/Marker
       Enabled: true
+      Name: Marker03
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov03/robot_marker
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Marker04
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov04/robot_marker
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 46; 194; 126
+      Enabled: false
+      History Length: 500
+      Name: setpoint_00
+      Radius: 0.05000000074505806
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov00/setpoint_position
+      Value: false
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 255; 163; 72
+      Enabled: false
+      History Length: 500
+      Name: setpoint_01
+      Radius: 0.05000000074505806
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov01/setpoint_position
+      Value: false
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 255; 120; 0
+      Enabled: false
+      History Length: 500
+      Name: setpoint_02
+      Radius: 0.05000000074505806
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /bluerov02/setpoint_position
+      Value: false
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
       Name: path00
       Namespaces:
-        robot_path: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -438,6 +677,71 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /bluerov00/lloyd_path_planner/robot_path
       Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: path01
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: System Default
+        Reliability Policy: Reliable
+        Value: /bluerov01/lloyd_path_planner/robot_path
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: path02
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: System Default
+        Reliability Policy: Reliable
+        Value: /bluerov02/lloyd_path_planner/robot_path
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: path03
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: System Default
+        Reliability Policy: Reliable
+        Value: /bluerov03/lloyd_path_planner/robot_path
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: path04
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: System Default
+        Reliability Policy: Reliable
+        Value: /bluerov04/lloyd_path_planner/robot_path
+      Value: true
+    - Class: rviz_default_plugins/Marker
+      Enabled: false
+      Name: pool_boundaries
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /start_coordinator/pool_boundaries
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
