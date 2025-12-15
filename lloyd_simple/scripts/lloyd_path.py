@@ -367,7 +367,7 @@ class Lloyd:
         safety_margin = self.encumbrance_barriers_float + self.encumbrance
 
         # transfer these points to h
-    
+
         valid_indices = np.all(dists_to_barriers > safety_margin, axis=1)
 
         cell_points = np.array(cell_points)[valid_indices]
@@ -376,7 +376,7 @@ class Lloyd:
         dists_pi_to_barriers = np.linalg.norm(self.current_position -
                                               barrier_positions,
                                               axis=1)
-        
+
         # ------------------ debugging ----------------------
 
         min_dist_index = np.argmin(dists_pi_to_barriers)
@@ -384,7 +384,7 @@ class Lloyd:
             min_dist_index]  # für debugging und auswertung
         # ------------------ debugging ----------------------
 
-        
+
         ############################################
         # effizienter
         ############################################
@@ -437,7 +437,7 @@ class Lloyd:
 
 
 def applyrules(d1, d2, dt, beta_d, beta_min, beta, current_position, c1, c2,
-               theta, final_goal, c1_no_rotation, goal_position):
+               theta, final_goal, c1_no_rotation, goal_position, epsilon):
     c1 = np.array(c1)  # centroid with neighbours
     current_position = np.array(current_position)
 
@@ -448,14 +448,18 @@ def applyrules(d1, d2, dt, beta_d, beta_min, beta, current_position, c1, c2,
         beta = max(beta - beta * dt, beta_min)
         if theta == 0.0:
             theta = min(theta + dt, alpha)
+
         else:
             theta = min(theta + theta * dt, alpha)
+        # neuer Parameter
+        epsilon = min(epsilon + dt, 0.0)
         # for debugging
         condition = 1
     # second condition
     else:
         beta = beta - dt * (beta - beta_d)
         theta = max(0, theta - theta * dt)
+        epsilon = max(-0.1, epsilon - dt * epsilon)
         # for debugging
         condition = 0
 
@@ -479,4 +483,4 @@ def applyrules(d1, d2, dt, beta_d, beta_min, beta, current_position, c1, c2,
         new_angle)  # new goalposition y
     # BlueRovs.destinations[i][0] = current_position
 
-    return goal_position, beta, theta, condition
+    return goal_position, beta, theta, condition, epsilon

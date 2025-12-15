@@ -8,7 +8,7 @@
     # === LLOYD-ALGORITHMUS PARAMETER ===
     d1: 0.65                # Skalierungsfaktor eq. (8)
     d2: 0.86             # Skalierungsfaktor 3 * R_L, bei R_L kleiner als 1 muss Faktor auch kleiner 3 werden eq. (9)
-    betaD: 0.13             # Gewünschter Spreading-Faktor
+    betaD: 0.13            # Gewünschter Spreading-Faktor
     beta_min: 0.007          # Minimaler Spreading-Faktor
     encumbrance_barriers: 0.05  # Abstand zu Hindernissen [m]
     epsilon: 0.0             # epsilon Anpassungsparameter für vorsichtigeres/ aggressiveres Verhalten
@@ -17,7 +17,7 @@
     flag_plot: false       # Visualisierung (für ROS2 meist false)
     write_file: false      # Datenaufzeichnung in Datei
     waiting_time: 400      # Wartezeit nach Konvergenz [Schritte]
-    start_offset_sec: 1.0  # Start offset in seconds
+    start_offset_sec: 3.0  # Start offset in seconds
 
 # szenario 1 & 2
 /bluerov00/**:
@@ -32,7 +32,7 @@
 #Szenario 3
 /bluerov02/**:
   ros__parameters:
-    init_pos: [0.5, 3.5]  # Startposition [m]
+    init_pos: [0.5, 3.0]  # Startposition [m]
     goal_pos: [0.5, 0.5]
 # Szenario 3
 /bluerov03/**:
@@ -40,12 +40,17 @@
     init_pos: [0.65, 2.0]  # Startposition [m]
     goal_pos: [0.8, 2.0]
 # Szenario 4
-/bluerov04/**:
-  ros__parameters:
-    init_pos: [2.5, 4.5]  # Startposition [m]
-    goal_pos: [2.5, 2.0]
-# Szenario 4
-/bluerov05/**:
-  ros__parameters:
-    init_pos: [1.7, 0.9]  # Startposition [m]
-    goal_pos: [0.3, 0.9]
+# /bluerov00/**:
+#   ros__parameters:
+#     init_pos: [0.5, 1.0]  # Startposition [m]
+#     goal_pos: [1.5, 3.4]
+# # Szenario 4
+# /bluerov03/**:
+#   ros__parameters:
+#     init_pos: [1.5, 1.0]  # Startposition [m]
+#     goal_pos: [0.5, 3.4]
+# # Szenario 4
+# /bluerov04/**:
+#   ros__parameters:
+#     init_pos: [1.0, 0.5]  # Startposition [m]
+#     goal_pos: [1.0, 2.5]

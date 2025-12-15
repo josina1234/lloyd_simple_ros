@@ -4,10 +4,6 @@
     pool_limits_y: [0.0, 4.0]  # in m
     cell_resolution: 0.025  # in m
 
-    # # middle standard obstacle
-    # obstacle_limits_x: [0.75, 1.25]  # in m
-    # obstacle_limits_y: [1.9, 2.1]  # in m
-
     # # Szenario 1: standard obstacle smaller
     # obstacle_limits_x: [0.8, 1.2]  # in m
     # obstacle_limits_y: [1.9, 2.1]  # in m
@@ -19,3 +15,7 @@
     # # obstacle on side good
     # obstacle_limits_x: [0.0, 0.5]  # in m
     # obstacle_limits_y: [1.9, 2.1]  # in m
+
+    # # Szenario 4:
+    # obstacle_limits_x: [0.85, 1.15]  # in m
+    # obstacle_limits_y: [1.8, 2.0]  # in m

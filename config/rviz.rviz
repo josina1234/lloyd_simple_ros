@@ -668,7 +668,7 @@ Visualization Manager:
       Enabled: true
       Name: path00
       Namespaces:
-        {}
+        robot_path: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -730,7 +730,7 @@ Visualization Manager:
         Value: /bluerov04/lloyd_path_planner/robot_path
       Value: true
     - Class: rviz_default_plugins/Marker
-      Enabled: false
+      Enabled: true
       Name: pool_boundaries
       Namespaces:
         {}
@@ -741,7 +741,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /start_coordinator/pool_boundaries
-      Value: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

@@ -51,10 +51,10 @@ class LloydPathPlanner(Node):
         self.path_marker_pub = self.create_publisher(Marker, '~/marker',
                                                      1)  # TODO ggf unnötig
         
-        # Initialize weighted centroids marker
-        self.weighted_centroids_marker: Marker
-        self.init_weighted_centroids_marker()
-        self.weighted_centroids_pub = self.create_publisher(Marker, '~/weighted_centroids', 1)
+        # # Initialize weighted centroids marker
+        # self.weighted_centroids_marker: Marker
+        # self.init_weighted_centroids_marker()
+        # self.weighted_centroids_pub = self.create_publisher(Marker, '~/weighted_centroids', 1)
         
         self.setpoints = [] # zum Speichern der c1
 
@@ -534,9 +534,9 @@ class LloydPathPlanner(Node):
         self.c1, self.c2, self.c1_no_rotation = self.Lloyd.get_centroid()
 
         # Apply rules to update beta, theta, and goal_position
-        self.goal_position, self.beta, self.theta, self.condition = applyrules(self.d1, self.d2, self.dt, self.betaD, self.beta_min,
+        self.goal_position, self.beta, self.theta, self.condition, self.epsilon = applyrules(self.d1, self.d2, self.dt, self.betaD, self.beta_min,
                    self.beta, current_position, self.c1, self.c2, self.theta,
-                   self.final_goal, self.c1_no_rotation, self.goal_position)
+                   self.final_goal, self.c1_no_rotation, self.goal_position, self.epsilon)
 
         # Publish setpoint for position controller
         self.publish_setpoint(self.c1)
@@ -589,8 +589,8 @@ class LloydPathPlanner(Node):
         # Store setpoint for debugging
         self.setpoints.append([float(point[0]), float(point[1])])
         
-        # Publish weighted centroids marker
-        self.publish_weighted_centroids_marker()
+        # # Publish weighted centroids marker
+        # self.publish_weighted_centroids_marker()
 
     def publish_beta(self):
         """Publish beta value for debugging"""
@@ -711,6 +711,10 @@ class LloydPathPlanner(Node):
         self.setpoints.clear()
         # Clear robot path when resetting
         self.robot_path_points.clear()
+        # Clear robot poses dictionary
+        self.robot_poses.clear()
+        self.get_logger().info(f'{self.own_namespace}: Memory cleanup completed - cleared setpoints, path points, and robot poses')
+
 
     def init_path_marker(self):
         msg = Marker()
@@ -735,28 +739,28 @@ class LloydPathPlanner(Node):
         msg.header.stamp = self.get_clock().now().to_msg()
         self.path_marker_pub.publish(msg)
 
-    def init_weighted_centroids_marker(self):
-        msg = Marker()
-        msg.action = Marker.ADD
-        msg.ns = 'weighted_centroids'
-        msg.id = 0
-        msg.type = Marker.LINE_STRIP
-        msg.header.frame_id = 'map'
-        msg.color.a = 1.0
-        msg.color.r = 1.0
-        msg.color.g = 0.0
-        msg.color.b = 1.0
-        msg.scale.x = 0.02
-        msg.scale.y = 0.02
-        msg.scale.z = 0.02
-        self.weighted_centroids_marker = msg
+    # def init_weighted_centroids_marker(self):
+    #     msg = Marker()
+    #     msg.action = Marker.ADD
+    #     msg.ns = 'weighted_centroids'
+    #     msg.id = 0
+    #     msg.type = Marker.LINE_STRIP
+    #     msg.header.frame_id = 'map'
+    #     msg.color.a = 1.0
+    #     msg.color.r = 1.0
+    #     msg.color.g = 0.0
+    #     msg.color.b = 1.0
+    #     msg.scale.x = 0.02
+    #     msg.scale.y = 0.02
+    #     msg.scale.z = 0.02
+    #     self.weighted_centroids_marker = msg
 
-    def publish_weighted_centroids_marker(self):
-        """Publish weighted centroids as a line strip marker"""
-        msg = self.weighted_centroids_marker
-        msg.points = [Point(x=p[0], y=p[1], z=-0.5) for p in self.setpoints]
-        msg.header.stamp = self.get_clock().now().to_msg()
-        self.weighted_centroids_pub.publish(msg)
+    # def publish_weighted_centroids_marker(self):
+    #     """Publish weighted centroids as a line strip marker"""
+    #     msg = self.weighted_centroids_marker
+    #     msg.points = [Point(x=p[0], y=p[1], z=-0.5) for p in self.setpoints]
+    #     msg.header.stamp = self.get_clock().now().to_msg()
+    #     self.weighted_centroids_pub.publish(msg)
 
 
 def main():

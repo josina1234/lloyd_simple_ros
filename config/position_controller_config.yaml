@@ -2,8 +2,7 @@
   ros__parameters:
     gains:
       p: 0.7 # 1.0
-      #i: 0.5
-      i: 0.0
+      i: 0.0 #0.01
       d: 1.8
     filter_gain: 0.1
-    max_thrust: 0.5
+    max_thrust: 0.4

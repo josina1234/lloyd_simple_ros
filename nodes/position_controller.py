@@ -95,9 +95,9 @@ class PositionController(Node):
             PoseWithCovarianceStamped, 'vision_pose_cov', self.on_pose, 1
         )
         self.setpoint_timeout_timer = self.create_timer(
-            0.5, self.on_setpoint_timeout
+            0.1, self.on_setpoint_timeout
         )
-        self.state_timeout_timer = self.create_timer(0.5, self.on_state_timeout)
+        self.state_timeout_timer = self.create_timer(0.1, self.on_state_timeout)
 
     def on_params_changed(self, params):
         param: rclpy.Parameter
